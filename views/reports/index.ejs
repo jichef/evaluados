@@ -1,0 +1,144 @@
+<%- include('../partials/header') %>
+<%- include('../partials/nav') %>
+
+<div class="page-content">
+  <h1 class="h3 fw-bold mb-4"><i class="bi bi-file-earmark-bar-graph me-2 text-success"></i>Informes</h1>
+
+  <div class="row g-4">
+    <!-- Individual student report -->
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="report-icon bg-primary-subtle text-primary"><i class="bi bi-person-lines-fill"></i></div>
+            <div>
+              <h3 class="h5 fw-semibold mb-0">Informe Individual</h3>
+              <div class="text-muted small">Historial completo de un alumno/a</div>
+            </div>
+          </div>
+          <form method="GET" action="" id="studentReportForm">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Alumno/a</label>
+              <select name="student_id" class="form-select" required onchange="document.getElementById('goStudentReport').href='/reports/student/' + this.value">
+                <option value="">Seleccionar alumno/a...</option>
+                <% students.forEach(s => { %>
+                  <option value="<%= s.id %>"><%= s.surname %>, <%= s.name %> (<%= s.course %> <%= s.group_name %>)</option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="row g-2 mb-3">
+              <div class="col-6">
+                <label class="form-label small">Desde</label>
+                <input type="date" name="date_from" class="form-control form-control-sm" id="repFrom">
+              </div>
+              <div class="col-6">
+                <label class="form-label small">Hasta</label>
+                <input type="date" name="date_to" class="form-control form-control-sm" id="repTo">
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label small">Programa (opcional)</label>
+              <select name="program_id" class="form-select form-select-sm">
+                <option value="">Todos los programas</option>
+                <% programs.forEach(p => { %>
+                  <option value="<%= p.id %>"><%= p.name %></option>
+                <% }) %>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-primary w-100" id="goStudentReport" formaction="#"
+              onclick="
+                const sel = this.form.querySelector('[name=student_id]');
+                if (!sel.value) { event.preventDefault(); alert('Selecciona un alumno/a'); return; }
+                const from = this.form.querySelector('[name=date_from]').value;
+                const to = this.form.querySelector('[name=date_to]').value;
+                const prog = this.form.querySelector('[name=program_id]').value;
+                let url = '/reports/student/' + sel.value + '?';
+                if (from) url += 'date_from=' + from + '&';
+                if (to) url += 'date_to=' + to + '&';
+                if (prog) url += 'program_id=' + prog;
+                window.location.href = url;
+                event.preventDefault();
+              ">
+              <i class="bi bi-file-earmark-person me-2"></i>Generar informe
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Group report -->
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="report-icon bg-success-subtle text-success"><i class="bi bi-people-fill"></i></div>
+            <div>
+              <h3 class="h5 fw-semibold mb-0">Informe Grupal</h3>
+              <div class="text-muted small">Resumen de un grupo o curso</div>
+            </div>
+          </div>
+          <form method="GET" action="/reports/group">
+            <div class="row g-2 mb-3">
+              <div class="col-6">
+                <label class="form-label fw-semibold">Curso</label>
+                <select name="course" class="form-select">
+                  <option value="">Todos</option>
+                  <% [...new Set(groups.map(g => g.course))].filter(Boolean).forEach(c => { %>
+                    <option value="<%= c %>"><%= c %></option>
+                  <% }) %>
+                </select>
+              </div>
+              <div class="col-6">
+                <label class="form-label fw-semibold">Grupo</label>
+                <select name="group_name" class="form-select">
+                  <option value="">Todos</option>
+                  <% [...new Set(groups.map(g => g.group_name))].filter(Boolean).forEach(g => { %>
+                    <option value="<%= g %>"><%= g %></option>
+                  <% }) %>
+                </select>
+              </div>
+            </div>
+            <div class="row g-2 mb-3">
+              <div class="col-6">
+                <label class="form-label small">Desde</label>
+                <input type="date" name="date_from" class="form-control form-control-sm">
+              </div>
+              <div class="col-6">
+                <label class="form-label small">Hasta</label>
+                <input type="date" name="date_to" class="form-control form-control-sm">
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label small">Programa (opcional)</label>
+              <select name="program_id" class="form-select form-select-sm">
+                <option value="">Todos los programas</option>
+                <% programs.forEach(p => { %>
+                  <option value="<%= p.id %>"><%= p.name %></option>
+                <% }) %>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-success w-100">
+              <i class="bi bi-file-earmark-people me-2"></i>Generar informe grupal
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick access to recent students -->
+  <div class="card border-0 shadow-sm mt-4">
+    <div class="card-body">
+      <h3 class="h6 fw-semibold text-muted mb-3">Acceso rápido por alumno/a</h3>
+      <div class="d-flex flex-wrap gap-2">
+        <% students.slice(0, 20).forEach(s => { %>
+          <a href="/reports/student/<%= s.id %>" class="btn btn-sm btn-outline-secondary">
+            <%= s.name %> <%= s.surname %>
+          </a>
+        <% }) %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

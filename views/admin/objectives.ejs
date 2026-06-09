@@ -1,0 +1,46 @@
+<%- include('../partials/header') %>
+<%- include('../partials/nav') %>
+
+<div class="page-content">
+  <%- include('../partials/flash') %>
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <a href="/admin" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+    <h1 class="h3 fw-bold mb-0"><i class="bi bi-bullseye me-2"></i>Objetivos</h1>
+  </div>
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="card border-0 shadow-sm">
+        <div class="list-group list-group-flush">
+          <% if (objectives.length === 0) { %>
+          <div class="list-group-item text-center text-muted py-4">Sin objetivos creados</div>
+          <% } %>
+          <% objectives.forEach(o => { %>
+          <div class="list-group-item d-flex justify-content-between align-items-start py-2">
+            <div class="small flex-grow-1 me-3">
+              <%= o.description %>
+              <% if (o.area) { %><span class="badge bg-info-subtle text-info ms-1"><%= o.area %></span><% } %>
+            </div>
+            <form method="POST" action="/admin/objectives/<%= o.id %>/delete" onsubmit="return confirm('¿Eliminar?')">
+              <button type="submit" class="btn btn-xs btn-outline-danger"><i class="bi bi-trash"></i></button>
+            </form>
+          </div>
+          <% }) %>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <h3 class="h6 fw-semibold mb-3">Añadir objetivo</h3>
+          <form method="POST" action="/admin/objectives">
+            <div class="mb-2"><textarea name="description" class="form-control form-control-sm" rows="3" placeholder="Descripción del objetivo *" required></textarea></div>
+            <div class="mb-3"><input type="text" name="area" class="form-control form-control-sm" placeholder="Área (opcional)"></div>
+            <button type="submit" class="btn btn-primary btn-sm w-100">Añadir objetivo</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

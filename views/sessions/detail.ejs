@@ -1,0 +1,112 @@
+<%- include('../partials/header') %>
+<%- include('../partials/nav') %>
+
+<div class="page-content">
+  <%- include('../partials/flash') %>
+
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <a href="/sessions" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+    <h1 class="h4 fw-bold mb-0">Detalle de Sesión</h1>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-md-8">
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body">
+          <div class="d-flex align-items-center gap-3 mb-4">
+            <span class="program-icon-lg" style="background: <%= session.color %>20; color: <%= session.color %>">
+              <i class="bi bi-book"></i>
+            </span>
+            <div>
+              <div class="h5 fw-bold mb-0"><%= session.student_name %></div>
+              <div class="text-muted small"><%= session.program_name %> &middot; <%= new Date(session.session_date).toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) %></div>
+            </div>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-sm-6">
+              <label class="form-label small fw-semibold text-muted text-uppercase">Actividad</label>
+              <div class="fw-semibold"><%= session.activity_name %></div>
+              <% if (session.activity_desc) { %><div class="text-muted small"><%= session.activity_desc %></div><% } %>
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label small fw-semibold text-muted text-uppercase">Valoración</label>
+              <div>
+                <% if (session.rating) { %>
+                  <span class="badge rating-badge rating-<%= session.rating %> fs-6 px-3 py-2">
+                    <%= session.rating === 'conseguido' ? '✅ Conseguido' : session.rating === 'en_proceso' ? '🔄 En proceso' : '🔶 Necesita apoyo' %>
+                  </span>
+                <% } else { %><span class="text-muted">Sin valorar</span><% } %>
+              </div>
+            </div>
+            <% if (session.situation_title) { %>
+            <div class="col-12">
+              <label class="form-label small fw-semibold text-muted text-uppercase">Situación de aprendizaje</label>
+              <div><i class="bi bi-map me-1"></i><%= session.situation_title %></div>
+            </div>
+            <% } %>
+            <div class="col-12">
+              <label class="form-label small fw-semibold text-muted text-uppercase">Docente</label>
+              <div><%= session.teacher_name %></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <% if (session.observations) { %>
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body">
+          <h3 class="h6 fw-semibold text-muted mb-2">Observaciones</h3>
+          <p class="mb-0"><%= session.observations %></p>
+        </div>
+      </div>
+      <% } %>
+
+      <% if (session.criteria_ratings && session.criteria_ratings.length) { %>
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <h3 class="h6 fw-semibold text-muted mb-3">Valoración por criterios</h3>
+          <% session.criteria_ratings.forEach(cr => { %>
+          <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
+            <div class="small">
+              <% if (cr.code) { %><span class="badge bg-secondary me-1"><%= cr.code %></span><% } %>
+              <%= cr.description %>
+            </div>
+            <span class="badge rating-badge rating-<%= cr.rating %> ms-2 text-nowrap">
+              <%= cr.rating === 'conseguido' ? '✓' : cr.rating === 'en_proceso' ? '~' : '!' %>
+            </span>
+          </div>
+          <% }) %>
+        </div>
+      </div>
+      <% } %>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <h3 class="h6 fw-semibold text-muted mb-3">Acciones</h3>
+          <div class="d-grid gap-2">
+            <a href="/students/<%= session.student_id %>" class="btn btn-outline-primary">
+              <i class="bi bi-person me-2"></i>Ver perfil del alumno
+            </a>
+            <a href="/reports/student/<%= session.student_id %>" class="btn btn-outline-success">
+              <i class="bi bi-file-earmark-text me-2"></i>Generar informe
+            </a>
+            <a href="/sessions/new?student_id=<%= session.student_id %>" class="btn btn-primary">
+              <i class="bi bi-plus-circle me-2"></i>Nueva sesión
+            </a>
+            <hr class="my-1">
+            <form method="POST" action="/sessions/<%= session.id %>/delete" onsubmit="return confirm('¿Eliminar esta sesión definitivamente?')">
+              <button type="submit" class="btn btn-outline-danger w-100">
+                <i class="bi bi-trash me-2"></i>Eliminar sesión
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

@@ -1,0 +1,58 @@
+<%- include('../partials/header') %>
+<%- include('../partials/nav') %>
+
+<div class="page-content">
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <a href="/students" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+    <h1 class="h4 fw-bold mb-0"><%= title %></h1>
+  </div>
+
+  <div class="card border-0 shadow-sm" style="max-width: 600px">
+    <div class="card-body">
+      <% if (typeof error !== 'undefined' && error) { %>
+        <div class="alert alert-danger"><%= error %></div>
+      <% } %>
+      <form method="POST" action="<%= student ? '/students/' + student.id : '/students' %>">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Nombre <span class="text-danger">*</span></label>
+            <input type="text" name="name" class="form-control" value="<%= student?.name || '' %>" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Apellidos <span class="text-danger">*</span></label>
+            <input type="text" name="surname" class="form-control" value="<%= student?.surname || '' %>" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Curso</label>
+            <input type="text" name="course" class="form-control" value="<%= student?.course || '' %>" placeholder="1º, 2º…">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Grupo</label>
+            <input type="text" name="group_name" class="form-control" value="<%= student?.group_name || '' %>" placeholder="A, B…">
+          </div>
+          <% if (student) { %>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Estado</label>
+            <div class="form-check mt-2">
+              <input class="form-check-input" type="checkbox" name="active" id="active" <%= student.active ? 'checked' : '' %>>
+              <label class="form-check-label" for="active">Activo</label>
+            </div>
+          </div>
+          <% } %>
+          <div class="col-12">
+            <label class="form-label fw-semibold">Notas</label>
+            <textarea name="notes" class="form-control" rows="2"><%= student?.notes || '' %></textarea>
+          </div>
+        </div>
+        <div class="mt-4 d-flex gap-2">
+          <button type="submit" class="btn btn-primary px-4">
+            <i class="bi bi-check-lg me-1"></i><%= student ? 'Actualizar' : 'Crear alumno' %>
+          </button>
+          <a href="/students" class="btn btn-outline-secondary">Cancelar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

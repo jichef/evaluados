@@ -1,0 +1,287 @@
+<%- include('../partials/header') %>
+<%- include('../partials/nav') %>
+
+<div class="page-content">
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <a href="/activities" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+    <h1 class="h4 fw-bold mb-0"><%= title %></h1>
+  </div>
+
+  <div class="card border-0 shadow-sm" style="max-width: 800px">
+    <div class="card-body">
+      <% if (typeof error !== 'undefined' && error) { %>
+        <div class="alert alert-danger"><%= error %></div>
+      <% } %>
+      <form method="POST" action="<%= activity ? '/activities/' + activity.id : '/activities' %>">
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label fw-semibold">Nombre <span class="text-danger">*</span></label>
+            <input type="text" name="name" class="form-control" value="<%= activity?.name || '' %>" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Programa <span class="text-danger">*</span></label>
+            <select name="program_id" class="form-select" required>
+              <option value="">Seleccionar...</option>
+              <% programs.forEach(p => { %>
+                <option value="<%= p.id %>" <%= activity?.program_id == p.id ? 'selected' : '' %>><%= p.name %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Situación de aprendizaje</label>
+            <select name="situation_id" class="form-select">
+              <option value="">Sin situación</option>
+              <% situations.forEach(s => { %>
+                <option value="<%= s.id %>" <%= activity?.situation_id == s.id ? 'selected' : '' %>><%= s.title %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Duración (minutos)</label>
+            <input type="number" name="duration" class="form-control" value="<%= activity?.duration || 30 %>" min="5" max="180">
+          </div>
+          <div class="col-md-8">
+            <label class="form-label fw-semibold">Materiales necesarios</label>
+            <input type="text" name="materials" class="form-control" value="<%= activity?.materials || '' %>" placeholder="Fichas, pizarra, tablet...">
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold">Niveles</label>
+            <div class="border rounded p-3 bg-light">
+              <% availableLevels.forEach(group => { %>
+              <div class="mb-2">
+                <div class="small fw-semibold text-muted text-uppercase mb-1" style="font-size:.7rem;letter-spacing:.05em">
+                  <%= group.stage %>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                  <% group.levels.forEach(lvl => { %>
+                  <div class="form-check m-0">
+                    <input class="form-check-input level-check" type="checkbox" name="levels[]"
+                      value="<%= lvl %>" id="lvl_<%= lvl.replace(/[^\w]/g,'_') %>"
+                      <%= selectedLevels.includes(lvl) ? 'checked' : '' %>>
+                    <label class="form-check-label" for="lvl_<%= lvl.replace(/[^\w]/g,'_') %>"
+                      style="cursor:pointer"><%= lvl %></label>
+                  </div>
+                  <% }) %>
+                </div>
+              </div>
+              <% if (availableLevels.indexOf(group) < availableLevels.length - 1) { %>
+              <hr class="my-2">
+              <% } %>
+              <% }) %>
+            </div>
+            <div class="form-text">Sin seleccionar = válida para todos los niveles</div>
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold">Descripción</label>
+            <textarea name="description" class="form-control" rows="3"><%= activity?.description || '' %></textarea>
+          </div>
+
+          <!-- Objectives -->
+          <% if (objectives.length > 0) { %>
+          <div class="col-12">
+            <label class="form-label fw-semibold">Objetivos asociados</label>
+            <div class="border rounded p-3 bg-light" style="max-height: 200px; overflow-y: auto">
+              <% objectives.forEach(o => { %>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="objectives[]"
+                  value="<%= o.id %>" id="obj_<%= o.id %>"
+                  <%= selectedObjectives.includes(o.id) ? 'checked' : '' %>>
+                <label class="form-check-label small" for="obj_<%= o.id %>">
+                  <%= o.description %>
+                  <% if (o.area) { %><span class="badge bg-secondary ms-1"><%= o.area %></span><% } %>
+                </label>
+              </div>
+              <% }) %>
+            </div>
+          </div>
+          <% } %>
+
+          <!-- ── Criteria selector widget ── -->
+          <% if (criteria.length > 0) { %>
+          <div class="col-12">
+            <label class="form-label fw-semibold">
+              Criterios de evaluación
+              <span id="critCountBadge" class="badge bg-secondary-subtle text-secondary ms-1">0</span>
+            </label>
+
+            <div class="border rounded overflow-hidden shadow-sm">
+              <!-- Search bar -->
+              <div class="p-2 bg-white border-bottom">
+                <div class="input-group input-group-sm">
+                  <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                  <input type="text" id="critSearch" class="form-control border-start-0 ps-0"
+                    placeholder="Buscar por código, descripción o área...">
+                  <button type="button" class="btn btn-outline-secondary" id="critClearBtn" title="Limpiar">
+                    <i class="bi bi-x-lg"></i>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Area filter pills -->
+              <div class="px-2 py-2 border-bottom bg-light d-flex flex-wrap gap-1" id="critAreaPills">
+                <button type="button" class="btn btn-sm btn-secondary crit-area-pill active" data-area="">Todas</button>
+              </div>
+
+              <!-- Scrollable list -->
+              <div id="critPickerList" style="max-height: 320px; overflow-y: auto; background: #fff"></div>
+
+              <!-- Selected chips -->
+              <div id="critSelectedBar" class="p-2 border-top d-none" style="background:#f0f7ff">
+                <div class="small fw-semibold text-primary mb-1">
+                  <i class="bi bi-check2-all me-1"></i>Seleccionados:
+                </div>
+                <div id="critSelectedChips" class="d-flex flex-wrap gap-1"></div>
+              </div>
+            </div>
+
+            <!-- Hidden inputs populated by JS -->
+            <div id="critHiddenInputs"></div>
+          </div>
+          <% } %>
+
+          <% if (activity) { %>
+          <div class="col-12">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="active" id="active" <%= activity.active ? 'checked' : '' %>>
+              <label class="form-check-label" for="active">Actividad activa</label>
+            </div>
+          </div>
+          <% } %>
+        </div>
+
+        <div class="mt-4 d-flex gap-2">
+          <button type="submit" class="btn btn-primary px-4">
+            <i class="bi bi-check-lg me-1"></i><%= activity ? 'Actualizar' : 'Crear actividad' %>
+          </button>
+          <a href="/activities" class="btn btn-outline-secondary">Cancelar</a>
+          <% if (activity) { %>
+          <form method="POST" action="/activities/<%= activity.id %>/delete" class="ms-auto" onsubmit="return confirm('¿Desactivar esta actividad?')">
+            <button type="submit" class="btn btn-outline-danger">
+              <i class="bi bi-archive me-1"></i>Desactivar
+            </button>
+          </form>
+          <% } %>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<% if (criteria.length > 0) { %>
+<style>
+.crit-row { cursor: pointer; user-select: none; transition: background .1s; }
+.crit-row:hover { background: #f8f9fa; }
+.crit-row.sel { background: #eff6ff; }
+.crit-row.sel:hover { background: #dbeafe; }
+.crit-group-hdr { position: sticky; top: 0; z-index: 1; font-size: .68rem; letter-spacing: .05em; text-transform: uppercase; background: #f3f4f6; }
+</style>
+<script>
+const CRIT_DATA = <%- JSON.stringify(criteria.map(c => ({id: c.id, code: c.code || '', description: c.description, area: c.area || ''}))) %>;
+const selectedIds = new Set(<%- JSON.stringify(selectedCriteria) %>);
+
+// Build area pills
+const AREAS = [...new Set(CRIT_DATA.map(c => c.area).filter(Boolean))].sort();
+const pillBox = document.getElementById('critAreaPills');
+AREAS.forEach(area => {
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'btn btn-sm btn-outline-secondary crit-area-pill';
+  b.dataset.area = area; b.textContent = area;
+  pillBox.appendChild(b);
+});
+pillBox.addEventListener('click', e => {
+  const p = e.target.closest('.crit-area-pill');
+  if (!p) return;
+  pillBox.querySelectorAll('.crit-area-pill').forEach(x => { x.classList.remove('active','btn-secondary'); x.classList.add('btn-outline-secondary'); });
+  p.classList.add('active','btn-secondary'); p.classList.remove('btn-outline-secondary');
+  renderList();
+});
+
+const searchEl = document.getElementById('critSearch');
+searchEl.addEventListener('input', renderList);
+document.getElementById('critClearBtn').addEventListener('click', () => { searchEl.value = ''; renderList(); searchEl.focus(); });
+
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function rowHtml(c) {
+  const on = selectedIds.has(c.id);
+  return `<div class="crit-row d-flex align-items-start gap-2 px-3 py-2 border-bottom${on ? ' sel' : ''}" data-cid="${c.id}">
+    <div class="flex-shrink-0 mt-1"><i class="bi ${on ? 'bi-check-square-fill text-primary' : 'bi-square text-muted'}"></i></div>
+    <div class="small lh-sm flex-grow-1">
+      ${c.code ? `<strong class="me-1">${esc(c.code)}:</strong>` : ''}${esc(c.description)}
+      ${c.area ? `<span class="badge bg-info-subtle text-info ms-1" style="font-size:.62rem">${esc(c.area)}</span>` : ''}
+    </div>
+  </div>`;
+}
+
+function renderList() {
+  const q = searchEl.value.toLowerCase().trim();
+  const area = document.querySelector('.crit-area-pill.active')?.dataset.area || '';
+  const box = document.getElementById('critPickerList');
+
+  const filtered = CRIT_DATA.filter(c =>
+    (!area || c.area === area) &&
+    (!q || (c.code + ' ' + c.description + ' ' + c.area).toLowerCase().includes(q))
+  );
+
+  if (!filtered.length) {
+    box.innerHTML = '<div class="text-center text-muted py-4 small"><i class="bi bi-search me-1"></i>Sin resultados</div>';
+    return;
+  }
+
+  // Group by area only when no active filter and no search query
+  if (!area && !q) {
+    const groups = new Map();
+    filtered.forEach(c => { const k = c.area || 'Sin área'; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(c); });
+    box.innerHTML = [...groups.entries()].map(([grp, items]) =>
+      `<div class="crit-group-hdr px-3 py-1 border-bottom text-muted fw-semibold">${esc(grp)} <span class="fw-normal opacity-75">(${items.length})</span></div>` +
+      items.map(rowHtml).join('')
+    ).join('');
+  } else {
+    box.innerHTML = filtered.map(rowHtml).join('');
+  }
+
+  box.querySelectorAll('.crit-row').forEach(row => {
+    row.addEventListener('click', () => {
+      const id = parseInt(row.dataset.cid);
+      selectedIds.has(id) ? selectedIds.delete(id) : selectedIds.add(id);
+      renderList(); updateChips(); syncHidden();
+    });
+  });
+}
+
+function updateChips() {
+  const count = selectedIds.size;
+  const badge = document.getElementById('critCountBadge');
+  badge.textContent = count ? `${count} seleccionado${count !== 1 ? 's' : ''}` : '0';
+  badge.className = count ? 'badge bg-primary ms-1' : 'badge bg-secondary-subtle text-secondary ms-1';
+
+  const bar = document.getElementById('critSelectedBar');
+  const chips = document.getElementById('critSelectedChips');
+  if (!count) { bar.classList.add('d-none'); chips.innerHTML = ''; return; }
+  bar.classList.remove('d-none');
+
+  chips.innerHTML = CRIT_DATA.filter(c => selectedIds.has(c.id)).map(c => `
+    <span class="badge bg-white text-primary border border-primary d-inline-flex align-items-center gap-1 py-1 px-2" style="font-size:.75rem;max-width:200px">
+      <span class="text-truncate">${c.code ? esc(c.code) : esc(c.description.substring(0, 28) + (c.description.length > 28 ? '…' : ''))}</span>
+      <button type="button" class="btn-close ms-1" style="font-size:.45rem" data-xid="${c.id}" aria-label="Quitar"></button>
+    </span>`).join('');
+
+  chips.querySelectorAll('[data-xid]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      selectedIds.delete(parseInt(btn.dataset.xid));
+      renderList(); updateChips(); syncHidden();
+    });
+  });
+}
+
+function syncHidden() {
+  document.getElementById('critHiddenInputs').innerHTML =
+    [...selectedIds].map(id => `<input type="hidden" name="criteria[]" value="${id}">`).join('');
+}
+
+renderList(); updateChips(); syncHidden();
+</script>
+<% } %>
+
+<%- include('../partials/footer') %>

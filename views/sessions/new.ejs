@@ -1,0 +1,790 @@
+<%- include('../partials/header') %>
+<%- include('../partials/nav') %>
+
+<div class="page-content wizard-page">
+  <div class="d-flex align-items-center mb-4 gap-3">
+    <a href="/" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+    <h1 class="h4 fw-bold mb-0">Registrar Sesión</h1>
+    <div class="ms-auto">
+      <span id="timerDisplay" class="badge bg-light text-dark border" title="Tiempo de registro">
+        <i class="bi bi-stopwatch me-1"></i><span id="timerValue">0s</span>
+      </span>
+    </div>
+  </div>
+
+  <!-- Progress steps (desktop) -->
+  <div class="wizard-steps d-none d-md-flex mb-4">
+    <% ['Alumno', 'Programa', 'Actividad', 'Valoración', 'Observaciones'].forEach((s, i) => { %>
+    <div class="wizard-step" id="step-indicator-<%= i+1 %>">
+      <div class="step-circle"><%= i+1 %></div>
+      <div class="step-label"><%= s %></div>
+    </div>
+    <% if (i < 4) { %><div class="step-connector"></div><% } %>
+    <% }) %>
+  </div>
+
+  <form id="sessionForm" action="/sessions" method="POST">
+    <!-- Hidden fields -->
+    <input type="hidden" name="student_id" id="student_id">
+    <input type="hidden" name="activity_id" id="activity_id">
+    <input type="hidden" name="program_id" id="program_id">
+    <input type="hidden" name="situation_id" id="situation_id">
+    <input type="hidden" name="rating" id="rating_input">
+    <input type="hidden" name="observations" id="observations_input">
+    <input type="hidden" name="quick_comments_text" id="quick_comments_text">
+
+    <!-- STEP 1: Student -->
+    <div class="wizard-step-panel" id="panel-1">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <h2 class="h5 fw-semibold mb-3"><span class="step-badge">1</span>Seleccionar alumno/a</h2>
+
+          <div class="mb-3">
+            <div class="input-group input-group-lg">
+              <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+              <input type="text" id="studentSearch" class="form-control form-control-lg border-start-0"
+                placeholder="Buscar por nombre o apellidos..." autocomplete="off">
+            </div>
+            <div id="studentResults" class="search-dropdown"></div>
+          </div>
+
+          <!-- Selected student display -->
+          <div id="selectedStudentCard" class="alert alert-primary d-none align-items-center gap-3">
+            <div class="student-avatar-lg" id="selectedStudentAvatar"></div>
+            <div class="flex-grow-1">
+              <div class="fw-bold" id="selectedStudentName"></div>
+              <div class="small" id="selectedStudentInfo"></div>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="changeStudentBtn">Cambiar</button>
+          </div>
+
+          <!-- Quick access: recent students -->
+          <div id="recentStudentsList">
+            <p class="text-muted small mb-2"><i class="bi bi-clock me-1"></i>Alumnado reciente:</p>
+            <div id="recentStudentsContainer" class="d-flex flex-wrap gap-2"></div>
+          </div>
+
+          <div class="mt-4">
+            <button type="button" class="btn btn-primary btn-lg w-100" id="step1Next" disabled>
+              Continuar <i class="bi bi-arrow-right ms-2"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: Program -->
+    <div class="wizard-step-panel d-none" id="panel-2">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <h2 class="h5 fw-semibold mb-3"><span class="step-badge">2</span>Seleccionar programa</h2>
+          <div class="row g-3" id="programButtons">
+            <% programs.forEach(p => { %>
+            <div class="col-6 col-md-3">
+              <button type="button" class="program-btn card h-100 border-2 w-100 text-start p-3"
+                data-program-id="<%= p.id %>" data-program-name="<%= p.name %>"
+                data-program-color="<%= p.color %>"
+                style="--program-color: <%= p.color %>">
+                <div class="program-btn-icon mb-2">
+                  <i class="bi bi-<%= p.icon %>" style="color:<%= p.color %>; font-size: 1.8rem"></i>
+                </div>
+                <div class="fw-semibold small"><%= p.name %></div>
+              </button>
+            </div>
+            <% }) %>
+          </div>
+          <div class="mt-4">
+            <button type="button" class="btn btn-outline-secondary" onclick="goToStep(1)">
+              <i class="bi bi-arrow-left me-1"></i>Atrás
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3: Activity bank -->
+    <div class="wizard-step-panel d-none" id="panel-3">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <h2 class="h5 fw-semibold mb-3"><span class="step-badge">3</span>Banco de actividades</h2>
+
+          <!-- Level banner (shown when student has a course) -->
+          <div id="actLevelBanner" class="d-none alert alert-info py-2 px-3 mb-2 d-flex align-items-center justify-content-between gap-2">
+            <span class="small">
+              <i class="bi bi-funnel-fill me-1"></i>
+              Nivel: <strong id="actLevelName"></strong>
+              <span id="actLevelCount" class="text-muted ms-1"></span>
+            </span>
+            <button type="button" class="btn btn-sm btn-outline-info flex-shrink-0" id="actLevelToggle">
+              Ver todas
+            </button>
+          </div>
+
+          <!-- Search + filter bar -->
+          <div class="input-group input-group-sm mb-2">
+            <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+            <input type="text" id="activitySearch" class="form-control border-start-0 ps-1"
+              placeholder="Buscar actividad...">
+            <button type="button" class="btn btn-outline-secondary" id="actClearSearch">
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </div>
+
+          <!-- Situation filter pills (populated by JS) -->
+          <div id="actFilterBar" class="d-flex flex-wrap gap-1 mb-3 d-none"></div>
+
+          <!-- Activity cards grid -->
+          <div id="activityGrid" class="row g-2"></div>
+
+          <!-- Empty state -->
+          <div id="actEmptyState" class="text-center text-muted py-5 d-none">
+            <i class="bi bi-clipboard-x fs-2 d-block mb-2 opacity-50"></i>
+            No hay actividades para este programa
+          </div>
+
+          <!-- Activity details panel -->
+          <div id="activityDetails" class="activity-details d-none mt-3">
+            <div class="alert alert-light border">
+              <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
+                <div class="fw-semibold" id="actDetailName"></div>
+                <span class="badge bg-secondary-subtle text-secondary text-nowrap" id="actDetailDuration"></span>
+              </div>
+              <div id="actDetailSituation" class="small text-muted mb-1 d-none">
+                <i class="bi bi-map me-1"></i><span></span>
+              </div>
+              <div id="actDetailMaterials" class="small text-muted mb-1 d-none">
+                <i class="bi bi-tools me-1"></i><span></span>
+              </div>
+              <div id="actDetailObjectives" class="mt-2 d-none">
+                <div class="small fw-semibold text-muted mb-1">Objetivos:</div>
+                <ul class="small mb-0" id="actDetailObjectivesList"></ul>
+              </div>
+              <div id="actDetailCriteria" class="mt-2 d-none">
+                <div class="small fw-semibold text-muted mb-1">Criterios:</div>
+                <div id="actDetailCriteriaList" class="d-flex flex-wrap gap-1"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 d-flex gap-2">
+            <button type="button" class="btn btn-outline-secondary" onclick="goToStep(2)">
+              <i class="bi bi-arrow-left me-1"></i>Atrás
+            </button>
+            <button type="button" class="btn btn-primary flex-grow-1" id="step3Next" disabled>
+              Continuar <i class="bi bi-arrow-right ms-2"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4: Rating -->
+    <div class="wizard-step-panel d-none" id="panel-4">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <h2 class="h5 fw-semibold mb-3"><span class="step-badge">4</span>Valoración general</h2>
+
+          <div class="row g-3 mb-4">
+            <div class="col-4">
+              <button type="button" class="rating-btn card border-2 w-100 h-100 p-3 text-center"
+                data-rating="conseguido">
+                <div class="fs-2 mb-1">✅</div>
+                <div class="fw-semibold small text-success">Conseguido</div>
+              </button>
+            </div>
+            <div class="col-4">
+              <button type="button" class="rating-btn card border-2 w-100 h-100 p-3 text-center"
+                data-rating="en_proceso">
+                <div class="fs-2 mb-1">🔄</div>
+                <div class="fw-semibold small text-warning">En proceso</div>
+              </button>
+            </div>
+            <div class="col-4">
+              <button type="button" class="rating-btn card border-2 w-100 h-100 p-3 text-center"
+                data-rating="necesita_apoyo">
+                <div class="fs-2 mb-1">🔶</div>
+                <div class="fw-semibold small text-danger">Necesita apoyo</div>
+              </button>
+            </div>
+          </div>
+
+          <!-- Optional criteria ratings -->
+          <div id="criteriaRatingPanel" class="d-none">
+            <h3 class="h6 text-muted fw-semibold mb-3">Valoración por criterios (opcional)</h3>
+            <div id="criteriaRatingList"></div>
+          </div>
+
+          <div class="mt-4 d-flex gap-2">
+            <button type="button" class="btn btn-outline-secondary" onclick="goToStep(3)">
+              <i class="bi bi-arrow-left me-1"></i>Atrás
+            </button>
+            <button type="button" class="btn btn-primary flex-grow-1" id="step4Next" onclick="goToStep(5)">
+              Continuar <i class="bi bi-arrow-right ms-2"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5: Observations + Save -->
+    <div class="wizard-step-panel d-none" id="panel-5">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <h2 class="h5 fw-semibold mb-3"><span class="step-badge">5</span>Observaciones</h2>
+
+          <!-- Quick comments by category -->
+          <div id="quickCommentsPanel">
+            <div id="quickCommentCategories" class="mb-3"></div>
+          </div>
+
+          <!-- Selected comments display -->
+          <div id="selectedCommentsList" class="selected-comments mb-3"></div>
+
+          <!-- Free text -->
+          <div class="mb-3">
+            <textarea id="freeObservation" class="form-control" rows="3"
+              placeholder="Observación libre (opcional)..."></textarea>
+          </div>
+
+          <!-- Favorites section -->
+          <div class="accordion mb-3" id="favAccordion">
+            <div class="accordion-item border">
+              <h2 class="accordion-header">
+                <button class="accordion-button collapsed py-2 small" type="button" data-bs-toggle="collapse" data-bs-target="#favCollapse">
+                  <i class="bi bi-star-fill text-warning me-2"></i>Comentarios favoritos
+                </button>
+              </h2>
+              <div id="favCollapse" class="accordion-collapse collapse">
+                <div class="accordion-body py-2">
+                  <div id="favCommentsList" class="d-flex flex-wrap gap-2 mb-2"></div>
+                  <button type="button" class="btn btn-sm btn-outline-warning" id="saveFavBtn">
+                    <i class="bi bi-star me-1"></i>Guardar observación como favorita
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Summary before save -->
+          <div class="save-summary alert alert-light border mb-3">
+            <div class="row g-2 small">
+              <div class="col-6"><span class="text-muted">Alumno/a:</span> <strong id="sumStudent"></strong></div>
+              <div class="col-6"><span class="text-muted">Programa:</span> <strong id="sumProgram"></strong></div>
+              <div class="col-6"><span class="text-muted">Actividad:</span> <strong id="sumActivity"></strong></div>
+              <div class="col-6"><span class="text-muted">Valoración:</span> <strong id="sumRating"></strong></div>
+            </div>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-secondary" onclick="goToStep(4)">
+              <i class="bi bi-arrow-left me-1"></i>Atrás
+            </button>
+            <button type="submit" class="btn btn-success btn-lg flex-grow-1 fw-bold save-btn" id="saveBtn">
+              <i class="bi bi-check-circle-fill me-2"></i>Guardar Sesión
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
+
+<script>
+// ─── State ───────────────────────────────────────────
+const state = {
+  currentStep: 1,
+  student: null,
+  program: null,
+  activity: null,
+  activityDetails: null,
+  rating: null,
+  criteriaRatings: {},
+  selectedComments: [],
+};
+
+let timerStart = Date.now();
+let timerInterval = setInterval(() => {
+  const s = Math.floor((Date.now() - timerStart) / 1000);
+  document.getElementById('timerValue').textContent = s + 's';
+}, 1000);
+
+// ─── Step navigation ─────────────────────────────────
+function goToStep(n) {
+  document.querySelectorAll('.wizard-step-panel').forEach(p => p.classList.add('d-none'));
+  document.getElementById(`panel-${n}`).classList.remove('d-none');
+  state.currentStep = n;
+  updateStepIndicators(n);
+  window.scrollTo(0, 0);
+  if (n === 5) {
+    loadQuickComments();
+    loadFavorites();
+    updateSummary();
+  }
+}
+
+function updateStepIndicators(active) {
+  document.querySelectorAll('.wizard-step').forEach((el, i) => {
+    const step = i + 1;
+    el.classList.toggle('completed', step < active);
+    el.classList.toggle('active', step === active);
+  });
+}
+
+// ─── Step 1: Student search ───────────────────────────
+const studentSearch = document.getElementById('studentSearch');
+const studentResults = document.getElementById('studentResults');
+let searchTimeout;
+
+studentSearch.addEventListener('input', () => {
+  clearTimeout(searchTimeout);
+  const q = studentSearch.value.trim();
+  if (q.length < 1) { studentResults.innerHTML = ''; studentResults.classList.remove('show'); return; }
+  searchTimeout = setTimeout(() => searchStudents(q), 200);
+});
+
+async function searchStudents(q) {
+  const res = await fetch(`/api/students?q=${encodeURIComponent(q)}`);
+  const students = await res.json();
+  studentResults.innerHTML = '';
+  if (!students.length) {
+    studentResults.innerHTML = '<div class="search-item text-muted">Sin resultados</div>';
+    studentResults.classList.add('show');
+    return;
+  }
+  students.forEach(s => {
+    const div = document.createElement('div');
+    div.className = 'search-item';
+    div.innerHTML = `<span class="fw-semibold">${s.surname}, ${s.name}</span> <span class="text-muted small">${s.course || ''} ${s.group_name || ''}</span>`;
+    div.addEventListener('click', () => selectStudent(s));
+    studentResults.appendChild(div);
+  });
+  studentResults.classList.add('show');
+}
+
+function selectStudent(s) {
+  state.student = s;
+  document.getElementById('student_id').value = s.id;
+  studentResults.classList.remove('show');
+  studentSearch.value = '';
+  document.getElementById('recentStudentsList').classList.add('d-none');
+
+  const card = document.getElementById('selectedStudentCard');
+  card.classList.remove('d-none');
+  card.classList.add('d-flex');
+  document.getElementById('selectedStudentAvatar').textContent = s.name.charAt(0) + s.surname.charAt(0);
+  document.getElementById('selectedStudentName').textContent = `${s.name} ${s.surname}`;
+  document.getElementById('selectedStudentInfo').textContent = `${s.course || ''} ${s.group_name ? '· ' + s.group_name : ''}`.trim();
+  document.getElementById('step1Next').disabled = false;
+
+  // Load recent sessions for context
+  loadRecentContext(s.id);
+}
+
+document.getElementById('changeStudentBtn').addEventListener('click', () => {
+  state.student = null;
+  document.getElementById('student_id').value = '';
+  document.getElementById('selectedStudentCard').classList.add('d-none');
+  document.getElementById('selectedStudentCard').classList.remove('d-flex');
+  document.getElementById('step1Next').disabled = true;
+  document.getElementById('recentStudentsList').classList.remove('d-none');
+  studentSearch.focus();
+});
+
+async function loadRecentContext(studentId) {
+  const res = await fetch(`/api/students/${studentId}/recent`);
+  const sessions = await res.json();
+  // Context loaded but not shown inline - used for smart defaults
+}
+
+document.getElementById('step1Next').addEventListener('click', () => goToStep(2));
+
+// Load recent students
+async function loadRecentStudents() {
+  const res = await fetch('/api/students?q=');
+  const students = await res.json();
+  const container = document.getElementById('recentStudentsContainer');
+  students.slice(0, 8).forEach(s => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn-outline-secondary btn-sm student-quick-btn';
+    btn.innerHTML = `<span class="fw-semibold">${s.name} ${s.surname}</span>`;
+    btn.addEventListener('click', () => selectStudent(s));
+    container.appendChild(btn);
+  });
+}
+loadRecentStudents();
+
+// Pre-selected student
+<% if (preStudent) { %>
+selectStudent(<%= JSON.stringify(preStudent) %>);
+<% } %>
+
+// Close dropdown on outside click
+document.addEventListener('click', e => {
+  if (!e.target.closest('#studentSearch') && !e.target.closest('#studentResults')) {
+    studentResults.classList.remove('show');
+  }
+});
+
+// ─── Step 2: Program selection ────────────────────────
+document.querySelectorAll('.program-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    state.program = { id: btn.dataset.programId, name: btn.dataset.programName, color: btn.dataset.programColor || '#0d6efd' };
+    document.getElementById('program_id').value = state.program.id;
+    // Reset activity state when changing program
+    state.activity = null; state.activityDetails = null;
+    document.getElementById('activity_id').value = '';
+    document.getElementById('step3Next').disabled = true;
+    document.getElementById('activityDetails').classList.add('d-none');
+    document.getElementById('activitySearch').value = '';
+    loadActivities(state.program.id);
+    goToStep(3);
+  });
+});
+
+// ─── Step 3: Activity bank ────────────────────────────
+let _allActivities = [];
+let _showAllLevels = false;
+
+// Wire level toggle button
+document.getElementById('actLevelToggle').addEventListener('click', () => {
+  _showAllLevels = !_showAllLevels;
+  document.getElementById('actLevelToggle').textContent = _showAllLevels ? 'Filtrar por nivel' : 'Ver todas';
+  document.getElementById('actLevelToggle').classList.toggle('btn-info', _showAllLevels);
+  document.getElementById('actLevelToggle').classList.toggle('btn-outline-info', !_showAllLevels);
+  renderActivityGrid();
+});
+
+async function loadActivities(programId) {
+  const grid = document.getElementById('activityGrid');
+  const empty = document.getElementById('actEmptyState');
+  _showAllLevels = false; // reset when changing program
+  document.getElementById('actLevelToggle').textContent = 'Ver todas';
+  document.getElementById('actLevelToggle').classList.remove('btn-info');
+  document.getElementById('actLevelToggle').classList.add('btn-outline-info');
+
+  grid.innerHTML = '<div class="col-12 text-center text-muted py-3"><span class="spinner-border spinner-border-sm me-2"></span>Cargando...</div>';
+
+  const res = await fetch(`/api/activities?program_id=${programId}`);
+  _allActivities = await res.json();
+
+  // Show level banner if student has a course and activities have level data
+  const course = state.student?.course || '';
+  const banner = document.getElementById('actLevelBanner');
+  if (course) {
+    document.getElementById('actLevelName').textContent = course;
+    banner.classList.remove('d-none');
+  } else {
+    banner.classList.add('d-none');
+  }
+
+  if (!_allActivities.length) {
+    grid.innerHTML = '';
+    empty.classList.remove('d-none');
+    return;
+  }
+  empty.classList.add('d-none');
+
+  // Build situation filter pills
+  const situations = [...new Set(_allActivities.filter(a => a.situation_title).map(a => a.situation_title))];
+  const filterBar = document.getElementById('actFilterBar');
+  if (situations.length > 1) {
+    filterBar.innerHTML =
+      `<button type="button" class="btn btn-sm btn-secondary act-sit-pill active" data-sit="">Todas</button>` +
+      situations.map(s => `<button type="button" class="btn btn-sm btn-outline-secondary act-sit-pill" data-sit="${s}">${s.substring(0,28)}${s.length>28?'…':''}</button>`).join('');
+    filterBar.classList.remove('d-none');
+    filterBar.querySelectorAll('.act-sit-pill').forEach(pill => {
+      pill.addEventListener('click', () => {
+        filterBar.querySelectorAll('.act-sit-pill').forEach(p => { p.classList.remove('active','btn-secondary'); p.classList.add('btn-outline-secondary'); });
+        pill.classList.add('active','btn-secondary'); pill.classList.remove('btn-outline-secondary');
+        renderActivityGrid();
+      });
+    });
+  } else {
+    filterBar.classList.add('d-none');
+  }
+
+  renderActivityGrid();
+}
+
+function renderActivityGrid() {
+  const q = document.getElementById('activitySearch').value.toLowerCase().trim();
+  const sit = document.querySelector('.act-sit-pill.active')?.dataset.sit || '';
+  const grid = document.getElementById('activityGrid');
+  const color = state.program?.color || '#0d6efd';
+
+  const course = state.student?.course || '';
+  const filtered = _allActivities.filter(a => {
+    const matchSit = !sit || a.situation_title === sit;
+    const matchQ = !q || (a.name + ' ' + (a.situation_title || '') + ' ' + (a.description || '')).toLowerCase().includes(q);
+    // Level filter: empty levels field means activity applies to all levels
+    const matchLevel = _showAllLevels || !course || !a.levels || a.levels.split(',').includes(course);
+    return matchSit && matchQ && matchLevel;
+  });
+
+  // Update count in banner
+  if (course && !_showAllLevels) {
+    const total = _allActivities.filter(a => !a.levels || a.levels.split(',').includes(course)).length;
+    document.getElementById('actLevelCount').textContent = `(${total} actividad${total !== 1 ? 'es' : ''})`;
+  } else {
+    document.getElementById('actLevelCount').textContent = '';
+  }
+
+  if (!filtered.length) {
+    grid.innerHTML = '<div class="col-12 text-center text-muted py-3 small">Sin actividades para estos filtros</div>';
+    return;
+  }
+
+  grid.innerHTML = filtered.map(a => {
+    const isSelected = state.activity?.id === a.id;
+    return `<div class="col-6 col-md-4 col-lg-3">
+      <button type="button" class="activity-bank-card card border-2 w-100 h-100 text-start p-0${isSelected ? ' act-selected' : ''}"
+        data-activity-id="${a.id}"
+        style="${isSelected ? `border-color:${color}!important;background:#f0f7ff` : ''}">
+        <div class="card-body p-3 pb-2">
+          ${isSelected ? `<div class="mb-1" style="color:${color}"><i class="bi bi-check-circle-fill"></i></div>` : ''}
+          <div class="fw-semibold small lh-sm">${escWiz(a.name)}</div>
+          ${a.situation_title ? `<div class="text-muted mt-1" style="font-size:.7rem"><i class="bi bi-map me-1"></i>${escWiz(a.situation_title.substring(0,30))}${a.situation_title.length>30?'…':''}</div>` : ''}
+        </div>
+        <div class="px-3 pb-2 d-flex align-items-center gap-1 flex-wrap">
+          <span class="badge bg-light text-dark border" style="font-size:.65rem"><i class="bi bi-clock me-1"></i>${a.duration || 30} min</span>
+          ${a.levels ? a.levels.split(',').map(l => `<span class="badge bg-secondary-subtle text-secondary border" style="font-size:.6rem">${escWiz(l)}</span>`).join('') : ''}
+        </div>
+      </button>
+    </div>`;
+  }).join('');
+
+  grid.querySelectorAll('.activity-bank-card').forEach(card => {
+    const actId = parseInt(card.dataset.activityId);
+    const act = _allActivities.find(a => a.id === actId);
+    card.addEventListener('click', () => selectActivity(act));
+  });
+}
+
+function escWiz(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+async function selectActivity(a) {
+  state.activity = a;
+  document.getElementById('activity_id').value = a.id;
+  document.getElementById('step3Next').disabled = false;
+
+  // Re-render grid to show selection highlight
+  renderActivityGrid();
+
+  // Load details
+  const res = await fetch(`/api/activities/${a.id}`);
+  const details = await res.json();
+  state.activityDetails = details;
+
+  document.getElementById('situation_id').value = details.situation_id || '';
+
+  const detPanel = document.getElementById('activityDetails');
+  detPanel.classList.remove('d-none');
+  document.getElementById('actDetailName').textContent = details.name;
+  document.getElementById('actDetailDuration').textContent = `${details.duration || 30} min`;
+
+  const sitEl = document.getElementById('actDetailSituation');
+  if (details.situation_title) {
+    sitEl.classList.remove('d-none');
+    sitEl.querySelector('span').textContent = details.situation_title;
+  } else {
+    sitEl.classList.add('d-none');
+  }
+
+  const matEl = document.getElementById('actDetailMaterials');
+  if (details.materials) {
+    matEl.classList.remove('d-none');
+    matEl.querySelector('span').textContent = details.materials;
+  } else {
+    matEl.classList.add('d-none');
+  }
+
+  const objEl = document.getElementById('actDetailObjectives');
+  if (details.objectives?.length) {
+    objEl.classList.remove('d-none');
+    document.getElementById('actDetailObjectivesList').innerHTML =
+      details.objectives.map(o => `<li>${o.description}</li>`).join('');
+  } else {
+    objEl.classList.add('d-none');
+  }
+
+  const critEl = document.getElementById('actDetailCriteria');
+  if (details.criteria?.length) {
+    critEl.classList.remove('d-none');
+    document.getElementById('actDetailCriteriaList').innerHTML =
+      details.criteria.map(c => `<span class="badge bg-light text-dark border">${c.code ? c.code + ': ' : ''}${c.description.substring(0, 40)}${c.description.length > 40 ? '…' : ''}</span>`).join('');
+    // Build criteria rating panel for step 4
+    buildCriteriaRatings(details.criteria);
+  } else {
+    critEl.classList.add('d-none');
+    document.getElementById('criteriaRatingPanel').classList.add('d-none');
+  }
+}
+
+function buildCriteriaRatings(criteria) {
+  const panel = document.getElementById('criteriaRatingPanel');
+  const list = document.getElementById('criteriaRatingList');
+  if (!criteria.length) { panel.classList.add('d-none'); return; }
+  panel.classList.remove('d-none');
+  list.innerHTML = criteria.map(c => `
+    <div class="criteria-rating-row mb-3">
+      <div class="small fw-semibold mb-1">${c.code ? `<span class="badge bg-secondary me-1">${c.code}</span>` : ''}${c.description}</div>
+      <div class="btn-group btn-group-sm w-100">
+        <input type="radio" class="btn-check" name="criteria_ratings[${c.id}]" value="conseguido" id="cr_${c.id}_c" autocomplete="off">
+        <label class="btn btn-outline-success" for="cr_${c.id}_c">✓ Conseguido</label>
+        <input type="radio" class="btn-check" name="criteria_ratings[${c.id}]" value="en_proceso" id="cr_${c.id}_e" autocomplete="off">
+        <label class="btn btn-outline-warning" for="cr_${c.id}_e">~ En proceso</label>
+        <input type="radio" class="btn-check" name="criteria_ratings[${c.id}]" value="necesita_apoyo" id="cr_${c.id}_n" autocomplete="off">
+        <label class="btn btn-outline-danger" for="cr_${c.id}_n">! Apoyo</label>
+      </div>
+    </div>
+  `).join('');
+}
+
+document.getElementById('activitySearch').addEventListener('input', renderActivityGrid);
+document.getElementById('actClearSearch').addEventListener('click', () => {
+  document.getElementById('activitySearch').value = '';
+  renderActivityGrid();
+});
+
+document.getElementById('step3Next').addEventListener('click', () => goToStep(4));
+
+// ─── Step 4: Rating ───────────────────────────────────
+const ratingLabels = { conseguido: '✅ Conseguido', en_proceso: '🔄 En proceso', necesita_apoyo: '🔶 Necesita apoyo' };
+document.querySelectorAll('.rating-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.rating-btn').forEach(b => b.classList.remove('rating-selected'));
+    btn.classList.add('rating-selected');
+    state.rating = btn.dataset.rating;
+    document.getElementById('rating_input').value = state.rating;
+    document.getElementById('step4Next').disabled = false;
+    // Auto-advance after short delay
+    setTimeout(() => goToStep(5), 400);
+  });
+});
+
+// ─── Step 5: Observations ─────────────────────────────
+async function loadQuickComments() {
+  const programId = state.program?.id || '';
+  const res = await fetch(`/api/comments?program_id=${programId}`);
+  const comments = await res.json();
+
+  const catNames = {
+    participacion: 'Participación', autonomia: 'Autonomía', atencion: 'Atención',
+    aprendizaje: 'Aprendizaje', estrategias: 'Estrategias', programa: state.program?.name || 'Programa'
+  };
+
+  const byCategory = {};
+  comments.forEach(c => {
+    if (!byCategory[c.category]) byCategory[c.category] = [];
+    byCategory[c.category].push(c);
+  });
+
+  const container = document.getElementById('quickCommentCategories');
+  container.innerHTML = '';
+  Object.entries(byCategory).forEach(([cat, items]) => {
+    const section = document.createElement('div');
+    section.className = 'mb-3';
+    section.innerHTML = `<div class="small fw-semibold text-muted mb-2">${catNames[cat] || cat}:</div>
+      <div class="d-flex flex-wrap gap-2">${items.map(c =>
+        `<button type="button" class="btn btn-sm btn-outline-secondary quick-comment-chip" data-text="${c.text.replace(/"/g, '&quot;')}">${c.text.substring(0, 55)}${c.text.length > 55 ? '…' : ''}</button>`
+      ).join('')}</div>`;
+    container.appendChild(section);
+  });
+
+  // Bind chip clicks
+  document.querySelectorAll('.quick-comment-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const text = chip.dataset.text;
+      if (state.selectedComments.includes(text)) {
+        state.selectedComments = state.selectedComments.filter(t => t !== text);
+        chip.classList.remove('active');
+      } else {
+        state.selectedComments.push(text);
+        chip.classList.add('active');
+      }
+      updateSelectedComments();
+    });
+  });
+}
+
+function updateSelectedComments() {
+  const list = document.getElementById('selectedCommentsList');
+  if (!state.selectedComments.length) { list.innerHTML = ''; return; }
+  list.innerHTML = state.selectedComments.map(t =>
+    `<span class="badge bg-primary text-white p-2 me-1 mb-1 d-inline-flex align-items-center gap-2">
+      ${t.substring(0, 60)}${t.length > 60 ? '…' : ''}
+      <button type="button" class="btn-close btn-close-white" style="font-size:.6rem" onclick="removeComment('${t.replace(/'/g, "\\'")}')"></button>
+    </span>`
+  ).join('');
+}
+
+function removeComment(text) {
+  state.selectedComments = state.selectedComments.filter(t => t !== text);
+  document.querySelectorAll('.quick-comment-chip').forEach(chip => {
+    if (chip.dataset.text === text) chip.classList.remove('active');
+  });
+  updateSelectedComments();
+}
+
+// Load favorites
+async function loadFavorites() {
+  const res = await fetch('/api/favorites');
+  const favs = await res.json();
+  const list = document.getElementById('favCommentsList');
+  list.innerHTML = favs.map(f =>
+    `<button type="button" class="btn btn-sm btn-outline-warning quick-comment-chip" data-text="${f.text.replace(/"/g, '&quot;')}">${f.text.substring(0, 50)}</button>`
+  ).join('');
+  list.querySelectorAll('.quick-comment-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      state.selectedComments.push(chip.dataset.text);
+      chip.classList.add('active');
+      updateSelectedComments();
+    });
+  });
+}
+
+document.getElementById('saveFavBtn').addEventListener('click', async () => {
+  const text = document.getElementById('freeObservation').value.trim();
+  if (!text) { alert('Escribe una observación primero.'); return; }
+  await fetch('/api/favorites', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) });
+  await loadFavorites();
+  document.getElementById('saveFavBtn').textContent = '✓ Guardado';
+  setTimeout(() => { document.getElementById('saveFavBtn').innerHTML = '<i class="bi bi-star me-1"></i>Guardar observación como favorita'; }, 2000);
+});
+
+// Update summary
+function updateSummary() {
+  document.getElementById('sumStudent').textContent = state.student ? `${state.student.name} ${state.student.surname}` : '—';
+  document.getElementById('sumProgram').textContent = state.program?.name || '—';
+  document.getElementById('sumActivity').textContent = state.activity?.name || '—';
+  document.getElementById('sumRating').textContent = ratingLabels[state.rating] || 'Sin valorar';
+}
+
+// Form submit
+document.getElementById('sessionForm').addEventListener('submit', e => {
+  const allComments = [...state.selectedComments];
+  const freeText = document.getElementById('freeObservation').value.trim();
+  if (freeText) allComments.push(freeText);
+  document.getElementById('quick_comments_text').value = state.selectedComments.join(' ');
+  document.getElementById('observations_input').value = allComments.join(' ');
+
+  // Collect criteria ratings
+  document.querySelectorAll('input[name^="criteria_ratings"]').forEach(input => {
+    if (input.checked) {
+      const match = input.name.match(/\[(\d+)\]/);
+      if (match) state.criteriaRatings[match[1]] = input.value;
+    }
+  });
+
+  clearInterval(timerInterval);
+
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Guardando...';
+});
+
+
+</script>
+
+<%- include('../partials/footer') %>

@@ -1,0 +1,161 @@
+<%- include('../partials/header') %>
+<%- include('../partials/nav') %>
+
+<div class="page-content">
+  <%- include('../partials/flash') %>
+
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 fw-bold mb-0"><i class="bi bi-clock-history me-2 text-primary"></i>Historial de Sesiones</h1>
+    <a href="/sessions/new" class="btn btn-primary">
+      <i class="bi bi-plus-circle me-1"></i>Nueva
+    </a>
+  </div>
+
+  <!-- Filters -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+      <form method="GET" class="row g-2 align-items-end">
+        <div class="col-12 col-md-3">
+          <label class="form-label small fw-semibold mb-1">Alumno/a</label>
+          <select name="student_id" class="form-select form-select-sm">
+            <option value="">Todos</option>
+            <% students.forEach(s => { %>
+              <option value="<%= s.id %>" <%= filters.student_id == s.id ? 'selected' : '' %>>
+                <%= s.surname %>, <%= s.name %>
+              </option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label small fw-semibold mb-1">Programa</label>
+          <select name="program_id" class="form-select form-select-sm">
+            <option value="">Todos</option>
+            <% programs.forEach(p => { %>
+              <option value="<%= p.id %>" <%= filters.program_id == p.id ? 'selected' : '' %>><%= p.name %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label small fw-semibold mb-1">Desde</label>
+          <input type="date" name="date_from" class="form-control form-control-sm" value="<%= filters.date_from || '' %>">
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label small fw-semibold mb-1">Hasta</label>
+          <input type="date" name="date_to" class="form-control form-control-sm" value="<%= filters.date_to || '' %>">
+        </div>
+        <div class="col-6 col-md-3 d-flex gap-2">
+          <button type="submit" class="btn btn-primary btn-sm flex-grow-1">
+            <i class="bi bi-funnel me-1"></i>Filtrar
+          </button>
+          <a href="/sessions" class="btn btn-outline-secondary btn-sm">Limpiar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Sessions list -->
+  <% if (sessions.length === 0) { %>
+    <div class="text-center py-5 text-muted">
+      <i class="bi bi-calendar-x fs-1 opacity-50 mb-3 d-block"></i>
+      <h3 class="h5">Sin sesiones registradas</h3>
+      <p>Ajusta los filtros o registra una nueva sesión.</p>
+      <a href="/sessions/new" class="btn btn-primary">Registrar sesión</a>
+    </div>
+  <% } else { %>
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+        <small class="text-muted"><%= pagination.total %> sesiones</small>
+      </div>
+      <div class="table-responsive d-none d-md-block">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Fecha</th>
+              <th>Alumno/a</th>
+              <th>Programa</th>
+              <th>Actividad</th>
+              <th>Valoración</th>
+              <th>Docente</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% sessions.forEach(s => { %>
+            <tr>
+              <td class="text-nowrap small"><%= new Date(s.session_date).toLocaleDateString('es-ES') %></td>
+              <td>
+                <a href="/students/<%= s.student_id %>" class="text-decoration-none fw-semibold">
+                  <%= s.student_name %>
+                </a>
+                <div class="text-muted small"><%= s.course %> <%= s.group_name %></div>
+              </td>
+              <td>
+                <span class="program-pill" style="background: <%= s.color %>20; color: <%= s.color %>; border-color: <%= s.color %>40">
+                  <%= s.program_name %>
+                </span>
+              </td>
+              <td class="small"><%= s.activity_name %></td>
+              <td>
+                <% if (s.rating) { %>
+                  <span class="badge rating-badge rating-<%= s.rating %>">
+                    <%= s.rating === 'conseguido' ? 'Conseguido' : s.rating === 'en_proceso' ? 'En proceso' : 'Necesita apoyo' %>
+                  </span>
+                <% } else { %>
+                  <span class="text-muted small">—</span>
+                <% } %>
+              </td>
+              <td class="small text-muted"><%= s.teacher_name %></td>
+              <td class="text-end">
+                <a href="/sessions/<%= s.id %>" class="btn btn-xs btn-outline-secondary me-1"><i class="bi bi-eye"></i></a>
+                <form method="POST" action="/sessions/<%= s.id %>/delete" class="d-inline" onsubmit="return confirm('¿Eliminar esta sesión?')">
+                  <button type="submit" class="btn btn-xs btn-outline-danger"><i class="bi bi-trash"></i></button>
+                </form>
+              </td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Mobile card view -->
+      <div class="d-md-none list-group list-group-flush">
+        <% sessions.forEach(s => { %>
+        <div class="list-group-item py-3">
+          <div class="d-flex align-items-start gap-3">
+            <span class="program-dot-lg mt-1" style="background:<%= s.color %>"></span>
+            <div class="flex-grow-1">
+              <div class="d-flex justify-content-between">
+                <a href="/students/<%= s.student_id %>" class="fw-semibold text-decoration-none"><%= s.student_name %></a>
+                <small class="text-muted"><%= new Date(s.session_date).toLocaleDateString('es-ES') %></small>
+              </div>
+              <div class="small text-muted"><%= s.program_name %> · <%= s.activity_name %></div>
+              <% if (s.rating) { %>
+                <span class="badge rating-badge rating-<%= s.rating %> mt-1">
+                  <%= s.rating === 'conseguido' ? 'Conseguido' : s.rating === 'en_proceso' ? 'En proceso' : 'Necesita apoyo' %>
+                </span>
+              <% } %>
+            </div>
+          </div>
+        </div>
+        <% }) %>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <% if (pagination.pages > 1) { %>
+    <nav class="mt-4">
+      <ul class="pagination justify-content-center">
+        <% for (let i = 1; i <= pagination.pages; i++) { %>
+          <li class="page-item <%= pagination.page === i ? 'active' : '' %>">
+            <a class="page-link" href="?page=<%= i %>&student_id=<%= filters.student_id || '' %>&program_id=<%= filters.program_id || '' %>&date_from=<%= filters.date_from || '' %>&date_to=<%= filters.date_to || '' %>">
+              <%= i %>
+            </a>
+          </li>
+        <% } %>
+      </ul>
+    </nav>
+    <% } %>
+  <% } %>
+</div>
+
+<%- include('../partials/footer') %>

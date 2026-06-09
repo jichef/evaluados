@@ -1,0 +1,49 @@
+<%- include('../partials/header') %>
+<%- include('../partials/nav') %>
+
+<div class="page-content">
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <a href="/admin/users" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+    <h1 class="h4 fw-bold mb-0"><%= title %></h1>
+  </div>
+  <div class="card border-0 shadow-sm" style="max-width:500px">
+    <div class="card-body">
+      <% if (typeof error !== 'undefined' && error) { %><div class="alert alert-danger"><%= error %></div><% } %>
+      <form method="POST" action="<%= user ? '/admin/users/' + user.id : '/admin/users' %>">
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Nombre completo</label>
+          <input type="text" name="name" class="form-control" value="<%= user?.name || '' %>" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Correo electrónico</label>
+          <input type="email" name="email" class="form-control" value="<%= user?.email || '' %>" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold"><%= user ? 'Nueva contraseña (vacío = no cambiar)' : 'Contraseña' %></label>
+          <input type="password" name="password" class="form-control" <%= user ? '' : 'required' %>>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Rol</label>
+          <select name="role" class="form-select">
+            <option value="teacher" <%= user?.role === 'teacher' ? 'selected' : '' %>>Docente</option>
+            <option value="admin" <%= user?.role === 'admin' ? 'selected' : '' %>>Administrador</option>
+          </select>
+        </div>
+        <% if (user) { %>
+        <div class="mb-3">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="active" id="active" <%= user.active ? 'checked' : '' %>>
+            <label class="form-check-label" for="active">Cuenta activa</label>
+          </div>
+        </div>
+        <% } %>
+        <div class="d-flex gap-2 mt-4">
+          <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i><%= user ? 'Actualizar' : 'Crear usuario' %></button>
+          <a href="/admin/users" class="btn btn-outline-secondary">Cancelar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

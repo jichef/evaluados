@@ -1,0 +1,56 @@
+<%- include('../partials/header') %>
+<%- include('../partials/nav') %>
+
+<div class="page-content">
+  <%- include('../partials/flash') %>
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <a href="/admin" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+    <h1 class="h3 fw-bold mb-0"><i class="bi bi-building me-2"></i>Configuración del Centro</h1>
+  </div>
+
+  <div class="card border-0 shadow-sm" style="max-width:600px">
+    <div class="card-body">
+      <form method="POST" action="/admin/settings" enctype="multipart/form-data">
+        <h5 class="fw-semibold mb-3">Datos del Centro</h5>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Nombre del centro</label>
+          <input type="text" name="center_name" class="form-control" value="<%= settings.center_name || '' %>">
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Curso escolar</label>
+          <input type="text" name="school_year" class="form-control" value="<%= settings.school_year || '' %>" placeholder="2024-2025">
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Logotipo del centro</label>
+          <% if (settings.logo_path) { %>
+            <div class="mb-2"><img src="<%= settings.logo_path %>" height="50" class="border rounded p-1"></div>
+          <% } %>
+          <input type="file" name="logo" class="form-control" accept="image/*">
+        </div>
+        <div class="mb-4">
+          <label class="form-label fw-semibold">Texto del pie de página</label>
+          <input type="text" name="footer_text" class="form-control" value="<%= settings.footer_text || '' %>" placeholder="Texto que aparece en los informes">
+        </div>
+
+        <hr>
+        <h5 class="fw-semibold mb-3">Copias de Seguridad</h5>
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Retención (días)</label>
+            <input type="number" name="backup_retention_days" class="form-control" value="<%= settings.backup_retention_days || 30 %>" min="7" max="365">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Hora backup diario</label>
+            <input type="time" name="backup_time" class="form-control" value="<%= settings.backup_time || '02:00' %>">
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary px-4">
+          <i class="bi bi-check-lg me-1"></i>Guardar configuración
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

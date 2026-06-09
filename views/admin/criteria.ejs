@@ -1,0 +1,170 @@
+<%- include('../partials/header') %>
+<%- include('../partials/nav') %>
+
+<div class="page-content">
+  <%- include('../partials/flash') %>
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <div class="d-flex align-items-center gap-3">
+      <a href="/admin" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+      <h1 class="h3 fw-bold mb-0"><i class="bi bi-check2-square me-2"></i>Criterios de Evaluación</h1>
+    </div>
+    <form method="POST" action="/admin/criteria/import-lomloe"
+      onsubmit="return confirm('¿Importar todos los criterios LOMLOE (RD 157/2022)?\n\nSe añadirán los criterios que aún no existan. Los ya existentes no se duplicarán.')">
+      <button type="submit" class="btn btn-success">
+        <i class="bi bi-cloud-download me-2"></i>Importar criterios LOMLOE
+      </button>
+    </form>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-8">
+
+      <% const areas = [...new Set(criteria.map(c => c.area))].filter(Boolean).sort(); %>
+      <% if (areas.length > 1) { %>
+      <div class="d-flex flex-wrap gap-2 mb-3">
+        <button class="btn btn-sm btn-secondary area-filter active" data-area="">Todas (<%= criteria.length %>)</button>
+        <% areas.forEach(a => { %>
+          <button class="btn btn-sm btn-outline-secondary area-filter" data-area="<%= a %>"><%= a %></button>
+        <% }) %>
+      </div>
+      <% } %>
+
+      <div class="mb-3">
+        <input type="text" id="criteriaSearch" class="form-control"
+          placeholder="Buscar por código o descripción...">
+      </div>
+
+      <% if (criteria.length === 0) { %>
+        <div class="card border-0 shadow-sm text-center py-5 text-muted">
+          <i class="bi bi-clipboard-x fs-1 opacity-50 mb-3 d-block"></i>
+          <h3 class="h5 mb-2">Sin criterios de evaluación</h3>
+          <p class="mb-3">Importa los criterios LOMLOE automáticamente o añádelos manualmente.</p>
+          <form method="POST" action="/admin/criteria/import-lomloe" class="d-inline">
+            <button type="submit" class="btn btn-success">
+              <i class="bi bi-cloud-download me-2"></i>Importar criterios LOMLOE (RD 157/2022)
+            </button>
+          </form>
+        </div>
+      <% } else { %>
+        <div class="card border-0 shadow-sm">
+          <div class="card-header bg-transparent">
+            <small class="text-muted"><span id="criteriaCount"><%= criteria.length %></span> criterios</small>
+          </div>
+          <div class="table-responsive" style="max-height: 580px; overflow-y: auto">
+            <table class="table table-hover table-sm align-middle mb-0" id="criteriaTable">
+              <thead class="table-light sticky-top">
+                <tr>
+                  <th style="width:120px">Código</th>
+                  <th>Descripción</th>
+                  <th style="width:170px">Área</th>
+                  <th style="width:50px"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <% criteria.forEach(c => { %>
+                <tr data-area="<%= c.area || '' %>">
+                  <td><span class="badge bg-secondary font-monospace"><%= c.code || '—' %></span></td>
+                  <td class="small"><%= c.description %></td>
+                  <td><span class="badge bg-light text-dark border small"><%= c.area || '—' %></span></td>
+                  <td>
+                    <form method="POST" action="/admin/criteria/<%= c.id %>/delete"
+                      onsubmit="return confirm('¿Desactivar este criterio?')">
+                      <button type="submit" class="btn btn-xs btn-outline-danger">
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      <% } %>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm sticky-top" style="top:20px">
+        <div class="card-body">
+          <h3 class="h6 fw-semibold mb-1">Añadir criterio manualmente</h3>
+          <p class="text-muted small mb-3">Para criterios propios del centro o del docente.</p>
+          <form method="POST" action="/admin/criteria">
+            <div class="mb-2">
+              <label class="form-label small fw-semibold">Código</label>
+              <input type="text" name="code" class="form-control form-control-sm font-monospace"
+                placeholder="Ej: MAT.1.1">
+            </div>
+            <div class="mb-2">
+              <label class="form-label small fw-semibold">Descripción <span class="text-danger">*</span></label>
+              <textarea name="description" class="form-control form-control-sm" rows="3"
+                placeholder="Texto del criterio..." required></textarea>
+            </div>
+            <div class="mb-3">
+              <label class="form-label small fw-semibold">Área</label>
+              <input type="text" name="area" class="form-control form-control-sm"
+                placeholder="Ej: Matemáticas" list="areasList">
+              <datalist id="areasList">
+                <% areas.forEach(a => { %><option value="<%= a %>"><% }) %>
+              </datalist>
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm w-100">
+              <i class="bi bi-plus-circle me-1"></i>Añadir criterio
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <% if (criteria.length > 0) { %>
+      <div class="card border-0 shadow-sm mt-3">
+        <div class="card-body">
+          <h3 class="h6 fw-semibold mb-3">Criterios por área</h3>
+          <%
+            const areaCount = {};
+            criteria.forEach(c => { areaCount[c.area || 'Sin área'] = (areaCount[c.area || 'Sin área'] || 0) + 1; });
+          %>
+          <% Object.entries(areaCount).sort((a,b) => a[0].localeCompare(b[0])).forEach(([area, count]) => { %>
+            <div class="d-flex justify-content-between align-items-center small mb-1">
+              <span class="text-muted text-truncate me-2" style="max-width:140px"><%= area %></span>
+              <span class="badge bg-primary-subtle text-primary"><%= count %></span>
+            </div>
+          <% }) %>
+        </div>
+      </div>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<script>
+document.querySelectorAll('.area-filter').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.area-filter').forEach(b => {
+      b.classList.remove('active', 'btn-secondary');
+      b.classList.add('btn-outline-secondary');
+    });
+    btn.classList.remove('btn-outline-secondary');
+    btn.classList.add('active', 'btn-secondary');
+    filterTable();
+  });
+});
+
+const searchInput = document.getElementById('criteriaSearch');
+if (searchInput) searchInput.addEventListener('input', filterTable);
+
+function filterTable() {
+  const area = document.querySelector('.area-filter.active')?.dataset.area || '';
+  const q = (searchInput?.value || '').toLowerCase();
+  let visible = 0;
+  document.querySelectorAll('#criteriaTable tbody tr').forEach(row => {
+    const matchArea = !area || row.dataset.area === area;
+    const matchQ = !q || row.textContent.toLowerCase().includes(q);
+    const show = matchArea && matchQ;
+    row.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+  const countEl = document.getElementById('criteriaCount');
+  if (countEl) countEl.textContent = visible;
+}
+</script>
+
+<%- include('../partials/footer') %>

@@ -1,0 +1,252 @@
+<%- include('../partials/header') %>
+<% if (!print) { %><%- include('../partials/nav') %><% } %>
+
+<% if (!print) { %>
+<div class="page-content">
+  <div class="d-flex align-items-center gap-3 mb-4 d-print-none">
+    <a href="/reports" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+    <h1 class="h4 fw-bold mb-0">Informe Individual</h1>
+    <div class="ms-auto d-flex gap-2">
+      <a href="?<%= Object.entries(filters).filter(([,v]) => v).map(([k,v]) => k+'='+v).join('&') %>&print=1"
+        class="btn btn-outline-secondary btn-sm" target="_blank">
+        <i class="bi bi-printer me-1"></i>Imprimir / PDF
+      </a>
+    </div>
+  </div>
+<% } %>
+
+<div class="<%= print ? 'print-page' : '' %>">
+  <!-- Report header -->
+  <div class="report-header mb-4">
+    <div class="d-flex justify-content-between align-items-start">
+      <div>
+        <% if (centerSettings.logo_path) { %>
+          <img src="<%= centerSettings.logo_path %>" height="50" class="mb-2">
+        <% } %>
+        <h2 class="h4 fw-bold mb-0"><%= centerSettings.center_name || 'Centro Educativo' %></h2>
+        <div class="text-muted small">Curso escolar <%= centerSettings.school_year || '' %></div>
+      </div>
+      <div class="text-end">
+        <div class="badge bg-primary fs-6 px-3 py-2">Informe Individual</div>
+        <div class="text-muted small mt-1">Generado: <%= new Date().toLocaleDateString('es-ES') %></div>
+      </div>
+    </div>
+    <hr>
+  </div>
+
+  <!-- Student data -->
+  <div class="card border-0 bg-light mb-4">
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-8">
+          <h3 class="h4 fw-bold mb-1"><%= student.name %> <%= student.surname %></h3>
+          <div class="text-muted">
+            Curso: <strong><%= student.course || '—' %></strong> &bull;
+            Grupo: <strong><%= student.group_name || '—' %></strong>
+          </div>
+          <% if (filters.date_from || filters.date_to) { %>
+          <div class="text-muted small mt-1">
+            Periodo: <%= filters.date_from ? new Date(filters.date_from).toLocaleDateString('es-ES') : 'Inicio' %> –
+            <%= filters.date_to ? new Date(filters.date_to).toLocaleDateString('es-ES') : 'Actualidad' %>
+          </div>
+          <% } %>
+        </div>
+        <div class="col-md-4 text-md-end">
+          <div class="text-muted small">Docentes implicados:</div>
+          <div class="small"><%= teachers.join(', ') || '—' %></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Executive summary -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm text-center py-3">
+        <div class="stat-number"><%= sessions.length %></div>
+        <div class="stat-label">Sesiones totales</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm text-center py-3">
+        <div class="stat-number text-success"><%= sessions.filter(s => s.rating === 'conseguido').length %></div>
+        <div class="stat-label">Conseguido</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm text-center py-3">
+        <div class="stat-number text-warning"><%= sessions.filter(s => s.rating === 'en_proceso').length %></div>
+        <div class="stat-label">En proceso</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm text-center py-3">
+        <div class="stat-number text-danger"><%= sessions.filter(s => s.rating === 'necesita_apoyo').length %></div>
+        <div class="stat-label">Necesita apoyo</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Program distribution -->
+  <% if (programBreakdown.length > 0) { %>
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+      <h4 class="h6 fw-bold text-uppercase text-muted mb-3">Participación por programas</h4>
+      <% programBreakdown.forEach(p => { %>
+      <div class="mb-2">
+        <div class="d-flex justify-content-between small mb-1">
+          <span class="fw-semibold"><%= p.name %></span>
+          <span><%= p.count %> sesión<%= p.count !== 1 ? 'es' : '' %></span>
+        </div>
+        <div class="progress" style="height: 8px">
+          <div class="progress-bar" style="width: <%= Math.round(p.count / sessions.length * 100) %>%; background: <%= p.color %>"></div>
+        </div>
+      </div>
+      <% }) %>
+    </div>
+  </div>
+  <% } %>
+
+  <!-- Strengths & improvements -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-6">
+      <div class="card border-0 border-success border-start border-4 shadow-sm h-100">
+        <div class="card-body">
+          <h4 class="h6 fw-bold text-success mb-3"><i class="bi bi-star-fill me-2"></i>Fortalezas detectadas</h4>
+          <ul class="mb-0 small">
+            <% strengths.forEach(s => { %><li class="mb-1"><%= s %></li><% }) %>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card border-0 border-warning border-start border-4 shadow-sm h-100">
+        <div class="card-body">
+          <h4 class="h6 fw-bold text-warning mb-3"><i class="bi bi-arrow-up-circle-fill me-2"></i>Aspectos de seguimiento</h4>
+          <ul class="mb-0 small">
+            <% improvements.forEach(s => { %><li class="mb-1"><%= s %></li><% }) %>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Session details -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+      <h4 class="h6 fw-bold text-uppercase text-muted mb-3">Registro detallado de sesiones</h4>
+      <% if (sessions.length === 0) { %>
+        <p class="text-muted">Sin sesiones registradas en el periodo seleccionado.</p>
+      <% } else { %>
+        <div class="table-responsive">
+          <table class="table table-sm table-hover">
+            <thead class="table-light">
+              <tr>
+                <th>Fecha</th>
+                <th>Programa</th>
+                <th>Actividad</th>
+                <th>Situación</th>
+                <th>Valoración</th>
+                <th>Observaciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% sessions.forEach(s => { %>
+              <tr>
+                <td class="text-nowrap small"><%= new Date(s.session_date).toLocaleDateString('es-ES') %></td>
+                <td>
+                  <span class="program-pill small" style="background: <%= s.color %>20; color: <%= s.color %>">
+                    <%= s.program_name %>
+                  </span>
+                </td>
+                <td class="small"><%= s.activity_name %></td>
+                <td class="small text-muted"><%= s.situation_title || '—' %></td>
+                <td>
+                  <% if (s.rating) { %>
+                    <span class="badge rating-badge rating-<%= s.rating %>">
+                      <%= s.rating === 'conseguido' ? 'C' : s.rating === 'en_proceso' ? 'P' : 'A' %>
+                    </span>
+                  <% } else { %>—<% } %>
+                </td>
+                <td class="small text-muted" style="max-width: 200px"><%= s.observations ? s.observations.substring(0, 80) + (s.observations.length > 80 ? '…' : '') : '—' %></td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+        <div class="small text-muted mt-1">C = Conseguido · P = En proceso · A = Necesita apoyo</div>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- Criteria evolution -->
+  <% if (criteriaEvolution.length > 0) { %>
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+      <h4 class="h6 fw-bold text-uppercase text-muted mb-3">Evolución por criterios de evaluación</h4>
+      <div class="table-responsive">
+        <table class="table table-sm">
+          <thead class="table-light">
+            <tr>
+              <th>Criterio</th>
+              <th>Área</th>
+              <th>Sesiones</th>
+              <th>Conseguido</th>
+              <th>En proceso</th>
+              <th>Necesita apoyo</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% criteriaEvolution.forEach(c => { %>
+            <tr>
+              <td><% if (c.code) { %><strong><%= c.code %>:</strong> <% } %><%= c.description.substring(0, 60) %><%= c.description.length > 60 ? '…' : '' %></td>
+              <td class="small text-muted"><%= c.area || '—' %></td>
+              <td class="text-center"><%= c.times_worked %></td>
+              <td class="text-center text-success fw-semibold"><%= c.conseguido || 0 %></td>
+              <td class="text-center text-warning fw-semibold"><%= c.en_proceso || 0 %></td>
+              <td class="text-center text-danger fw-semibold"><%= c.necesita_apoyo || 0 %></td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <% } %>
+
+  <!-- Recommendations (editable on screen) -->
+  <% if (!print) { %>
+  <div class="card border-0 shadow-sm mb-4 d-print-none">
+    <div class="card-body">
+      <h4 class="h6 fw-bold text-uppercase text-muted mb-2">Recomendaciones educativas</h4>
+      <textarea class="form-control" rows="4" placeholder="Escribe aquí las recomendaciones para este alumno/a (este campo no se guardará automáticamente, cópialo antes de imprimir)..."></textarea>
+    </div>
+  </div>
+  <% } %>
+
+  <!-- Footer -->
+  <div class="report-footer mt-4 pt-3 border-top">
+    <div class="d-flex justify-content-between small text-muted">
+      <span><%= centerSettings.center_name || '' %> &bull; Curso <%= centerSettings.school_year || '' %></span>
+      <span><%= centerSettings.footer_text || '' %></span>
+    </div>
+  </div>
+</div>
+
+<% if (!print) { %>
+</div><!-- page-content -->
+<% } %>
+
+<% if (print) { %>
+<style>
+  @media print {
+    body { margin: 0; padding: 20px; }
+    .sidebar, nav, .btn { display: none !important; }
+  }
+</style>
+<script>window.onload = () => window.print();</script>
+<% } %>
+
+<% if (!print) { %>
+<%- include('../partials/footer') %>
+<% } %>

@@ -1,0 +1,97 @@
+<%- include('../partials/header') %>
+<%- include('../partials/nav') %>
+
+<div class="page-content">
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <a href="/students" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+    <h1 class="h4 fw-bold mb-0"><i class="bi bi-upload me-2"></i>Importar Alumnado desde Excel</h1>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-7">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <% if (typeof error !== 'undefined' && error) { %>
+            <div class="alert alert-danger"><%= error %></div>
+          <% } %>
+
+          <% if (!preview) { %>
+            <div class="alert alert-info mb-4">
+              <h6 class="alert-heading"><i class="bi bi-info-circle me-2"></i>Formato del archivo Excel</h6>
+              <p class="mb-2">El archivo debe incluir estas columnas en la primera fila:</p>
+              <ul class="mb-0">
+                <li><strong>Nombre</strong> – Nombre del alumno/a</li>
+                <li><strong>Apellidos</strong> – Apellidos del alumno/a</li>
+                <li><strong>Curso</strong> – Curso (ej: 3º)</li>
+                <li><strong>Grupo</strong> – Grupo (ej: A)</li>
+              </ul>
+            </div>
+            <form method="POST" enctype="multipart/form-data">
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Archivo Excel (.xlsx, .xls)</label>
+                <input type="file" name="file" class="form-control" accept=".xlsx,.xls" required>
+              </div>
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-upload me-2"></i>Cargar y previsualizar
+              </button>
+            </form>
+          <% } else { %>
+            <div class="alert alert-success">
+              <i class="bi bi-check-circle me-2"></i>
+              Archivo cargado: <strong><%= totalRows %> filas</strong> encontradas.
+              Previsualización de las primeras 20:
+            </div>
+
+            <div class="table-responsive mb-4">
+              <table class="table table-sm table-bordered">
+                <thead class="table-light">
+                  <tr><th>Nombre</th><th>Apellidos</th><th>Curso</th><th>Grupo</th></tr>
+                </thead>
+                <tbody>
+                  <% preview.forEach(row => { %>
+                    <tr>
+                      <td><%= row.name || '<span class="text-danger">Vacío</span>' %></td>
+                      <td><%= row.surname || '<span class="text-danger">Vacío</span>' %></td>
+                      <td><%= row.course || '—' %></td>
+                      <td><%= row.group_name || '—' %></td>
+                    </tr>
+                  <% }) %>
+                </tbody>
+              </table>
+            </div>
+
+            <form method="POST" enctype="multipart/form-data" action="/students/import/excel">
+              <input type="hidden" name="confirm" value="1">
+              <!-- Re-upload file for final import -->
+              <div class="mb-3">
+                <input type="file" name="file" class="form-control" accept=".xlsx,.xls" required>
+                <div class="form-text">Selecciona de nuevo el mismo archivo para confirmar la importación.</div>
+              </div>
+              <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-success">
+                  <i class="bi bi-check-circle me-2"></i>Confirmar importación
+                </button>
+                <a href="/students/import/excel" class="btn btn-outline-secondary">Cancelar</a>
+              </div>
+            </form>
+          <% } %>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-5">
+      <div class="card border-0 shadow-sm border-info-subtle">
+        <div class="card-body">
+          <h5><i class="bi bi-lightbulb text-warning me-2"></i>Consejos</h5>
+          <ul class="small mb-0">
+            <li class="mb-2">Los alumnos duplicados (mismo nombre y apellidos) serán omitidos automáticamente.</li>
+            <li class="mb-2">Usa el mismo formato para el curso en toda la aplicación (ej: <code>3º</code>).</li>
+            <li class="mb-2">Puedes descargar la plantilla de ejemplo para asegurarte del formato correcto.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

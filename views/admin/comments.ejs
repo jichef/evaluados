@@ -1,0 +1,71 @@
+<%- include('../partials/header') %>
+<%- include('../partials/nav') %>
+
+<div class="page-content">
+  <%- include('../partials/flash') %>
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <a href="/admin" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+    <h1 class="h3 fw-bold mb-0"><i class="bi bi-chat-quote me-2"></i>Comentarios Rápidos</h1>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <% const cats = { participacion: 'Participación', autonomia: 'Autonomía', atencion: 'Atención', aprendizaje: 'Aprendizaje', estrategias: 'Estrategias', programa: 'Específicos de programa' }; %>
+      <% Object.entries(cats).forEach(([cat, catName]) => { %>
+        <% const catComments = comments.filter(c => c.category === cat); %>
+        <% if (catComments.length > 0) { %>
+        <div class="card border-0 shadow-sm mb-3">
+          <div class="card-header bg-transparent fw-semibold small"><%= catName %></div>
+          <div class="list-group list-group-flush">
+            <% catComments.forEach(c => { %>
+            <div class="list-group-item d-flex justify-content-between align-items-start py-2">
+              <div class="small flex-grow-1 me-3">
+                <%= c.text %>
+                <% if (c.program_name) { %><span class="badge bg-secondary ms-1"><%= c.program_name %></span><% } %>
+              </div>
+              <form method="POST" action="/admin/comments/<%= c.id %>/delete" onsubmit="return confirm('¿Eliminar?')">
+                <button type="submit" class="btn btn-xs btn-outline-danger"><i class="bi bi-trash"></i></button>
+              </form>
+            </div>
+            <% }) %>
+          </div>
+        </div>
+        <% } %>
+      <% }) %>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm sticky-top" style="top: 20px">
+        <div class="card-body">
+          <h3 class="h6 fw-semibold mb-3">Añadir comentario</h3>
+          <form method="POST" action="/admin/comments">
+            <div class="mb-2">
+              <textarea name="text" class="form-control form-control-sm" rows="3" placeholder="Texto del comentario..." required></textarea>
+            </div>
+            <div class="mb-2">
+              <select name="category" class="form-select form-select-sm">
+                <option value="participacion">Participación</option>
+                <option value="autonomia">Autonomía</option>
+                <option value="atencion">Atención</option>
+                <option value="aprendizaje">Aprendizaje</option>
+                <option value="estrategias">Estrategias</option>
+                <option value="programa">Específico de programa</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <select name="program_id" class="form-select form-select-sm">
+                <option value="">General (todos los programas)</option>
+                <% programs.forEach(p => { %>
+                  <option value="<%= p.id %>"><%= p.name %></option>
+                <% }) %>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm w-100">Añadir comentario</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

@@ -1,0 +1,78 @@
+<%- include('../partials/header') %>
+<%- include('../partials/nav') %>
+
+<div class="page-content">
+  <%- include('../partials/flash') %>
+
+  <h1 class="h3 fw-bold mb-4"><i class="bi bi-gear me-2"></i>Administración</h1>
+
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+      <div class="stat-card card border-0 shadow-sm h-100 text-center py-3">
+        <div class="stat-icon bg-primary-subtle text-primary mb-2"><i class="bi bi-people-fill"></i></div>
+        <div class="stat-number"><%= stats.users %></div>
+        <div class="stat-label">Docentes</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="stat-card card border-0 shadow-sm h-100 text-center py-3">
+        <div class="stat-icon bg-success-subtle text-success mb-2"><i class="bi bi-person-check-fill"></i></div>
+        <div class="stat-number"><%= stats.students %></div>
+        <div class="stat-label">Alumnos</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="stat-card card border-0 shadow-sm h-100 text-center py-3">
+        <div class="stat-icon bg-warning-subtle text-warning mb-2"><i class="bi bi-clock-fill"></i></div>
+        <div class="stat-number"><%= stats.sessions %></div>
+        <div class="stat-label">Sesiones</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="stat-card card border-0 shadow-sm h-100 text-center py-3">
+        <div class="stat-icon bg-info-subtle text-info mb-2"><i class="bi bi-list-task"></i></div>
+        <div class="stat-number"><%= stats.activities %></div>
+        <div class="stat-label">Actividades</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <% const sections = [
+      { href: '/admin/users', icon: 'people', title: 'Usuarios', desc: 'Gestionar cuentas de docentes', color: 'primary' },
+      { href: '/students', icon: 'person-plus', title: 'Alumnado', desc: 'Alumnos y grupos', color: 'success' },
+      { href: '/admin/programs', icon: 'journal-bookmark', title: 'Programas', desc: 'Configurar programas de intervención', color: 'warning' },
+      { href: '/activities/new', icon: 'list-task', title: 'Actividades', desc: 'Crear y editar actividades', color: 'info' },
+      { href: '/admin/criteria', icon: 'check2-square', title: 'Criterios', desc: 'Criterios de evaluación', color: 'secondary' },
+      { href: '/admin/objectives', icon: 'bullseye', title: 'Objetivos', desc: 'Objetivos de aprendizaje', color: 'dark' },
+      { href: '/admin/situations', icon: 'map', title: 'Situaciones A.', desc: 'Situaciones de aprendizaje', color: 'primary' },
+      { href: '/admin/comments', icon: 'chat-quote', title: 'Comentarios', desc: 'Comentarios rápidos', color: 'success' },
+      { href: '/admin/settings', icon: 'building', title: 'Centro', desc: 'Configuración del centro', color: 'warning' },
+      { href: '/admin/backups', icon: 'shield-check', title: 'Copias de seguridad', desc: 'Gestionar backups', color: 'danger' },
+    ]; %>
+    <% sections.forEach(s => { %>
+    <div class="col-6 col-md-4 col-lg-3">
+      <a href="<%= s.href %>" class="card border-0 shadow-sm h-100 text-decoration-none admin-nav-card">
+        <div class="card-body text-center py-4">
+          <div class="admin-nav-icon bg-<%= s.color %>-subtle text-<%= s.color %> mb-3">
+            <i class="bi bi-<%= s.icon %>"></i>
+          </div>
+          <div class="fw-semibold"><%= s.title %></div>
+          <div class="text-muted small"><%= s.desc %></div>
+        </div>
+      </a>
+    </div>
+    <% }) %>
+  </div>
+
+  <% if (lastBackup) { %>
+  <div class="alert alert-light border mt-4">
+    <i class="bi bi-shield-check me-2 text-success"></i>
+    Último backup: <strong><%= lastBackup.filename %></strong> –
+    <%= new Date(lastBackup.created_at).toLocaleString('es-ES') %> (<%= lastBackup.type %>)
+    <a href="/admin/backups" class="ms-2 small">Ver todos</a>
+  </div>
+  <% } %>
+</div>
+
+<%- include('../partials/footer') %>

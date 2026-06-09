@@ -1,0 +1,145 @@
+<%- include('../partials/header') %>
+<%- include('../partials/nav') %>
+
+<div class="page-content">
+  <%- include('../partials/flash') %>
+
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <a href="/students" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+    <div class="student-avatar-xl"><%= student.name.charAt(0) %><%= student.surname.charAt(0) %></div>
+    <div>
+      <h1 class="h3 fw-bold mb-0"><%= student.name %> <%= student.surname %></h1>
+      <div class="text-muted small">
+        <%= student.course || '' %> <%= student.group_name ? '· Grupo ' + student.group_name : '' %>
+      </div>
+    </div>
+    <div class="ms-auto d-flex gap-2">
+      <a href="/sessions/new?student_id=<%= student.id %>" class="btn btn-primary">
+        <i class="bi bi-plus-circle me-1"></i>Sesión
+      </a>
+      <a href="/reports/student/<%= student.id %>" class="btn btn-outline-success">
+        <i class="bi bi-file-earmark-text me-1"></i>Informe
+      </a>
+      <% if (currentUser.role === 'admin') { %>
+      <a href="/students/<%= student.id %>/edit" class="btn btn-outline-secondary">
+        <i class="bi bi-pencil"></i>
+      </a>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- Stats row -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm text-center py-3">
+        <div class="stat-number"><%= stats.total || 0 %></div>
+        <div class="stat-label">Sesiones totales</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm text-center py-3 border-success-subtle">
+        <div class="stat-number text-success"><%= stats.conseguido || 0 %></div>
+        <div class="stat-label">Conseguido</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm text-center py-3 border-warning-subtle">
+        <div class="stat-number text-warning"><%= stats.en_proceso || 0 %></div>
+        <div class="stat-label">En proceso</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm text-center py-3 border-danger-subtle">
+        <div class="stat-number text-danger"><%= stats.necesita_apoyo || 0 %></div>
+        <div class="stat-label">Necesita apoyo</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Program breakdown -->
+  <% if (programBreakdown.length > 0) { %>
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+      <h3 class="h6 fw-semibold text-muted mb-3">Distribución por programas</h3>
+      <div class="d-flex flex-wrap gap-2">
+        <% programBreakdown.forEach(p => { %>
+          <span class="program-pill px-3 py-2" style="background: <%= p.color %>20; color: <%= p.color %>; border: 1px solid <%= p.color %>40">
+            <strong><%= p.count %></strong> · <%= p.name %>
+          </span>
+        <% }) %>
+      </div>
+    </div>
+  </div>
+  <% } %>
+
+  <!-- Filters -->
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-body py-2">
+      <form method="GET" class="row g-2 align-items-end">
+        <div class="col-6 col-md-3">
+          <select name="program_id" class="form-select form-select-sm">
+            <option value="">Todos los programas</option>
+            <% programs.forEach(p => { %>
+              <option value="<%= p.id %>" <%= filters.program_id == p.id ? 'selected' : '' %>><%= p.name %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="col-6 col-md-2">
+          <input type="date" name="date_from" class="form-control form-control-sm" value="<%= filters.date_from || '' %>" placeholder="Desde">
+        </div>
+        <div class="col-6 col-md-2">
+          <input type="date" name="date_to" class="form-control form-control-sm" value="<%= filters.date_to || '' %>" placeholder="Hasta">
+        </div>
+        <div class="col-6 col-md-2 d-flex gap-2">
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-funnel"></i></button>
+          <a href="/students/<%= student.id %>" class="btn btn-outline-secondary btn-sm">✕</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Session history -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-transparent">
+      <h3 class="h6 fw-semibold mb-0"><i class="bi bi-clock-history me-2 text-primary"></i>Historial de sesiones</h3>
+    </div>
+    <% if (sessions.length === 0) { %>
+      <div class="card-body text-center py-4 text-muted">
+        <i class="bi bi-calendar-x fs-2 opacity-50 mb-2 d-block"></i>
+        Sin sesiones registradas
+      </div>
+    <% } else { %>
+      <div class="list-group list-group-flush">
+        <% sessions.forEach(s => { %>
+          <a href="/sessions/<%= s.id %>" class="list-group-item list-group-item-action py-3">
+            <div class="d-flex align-items-start gap-3">
+              <span class="program-dot-lg mt-1" style="background: <%= s.color %>"></span>
+              <div class="flex-grow-1">
+                <div class="d-flex justify-content-between align-items-start">
+                  <div>
+                    <div class="fw-semibold small"><%= s.activity_name %></div>
+                    <div class="text-muted small"><%= s.program_name %><% if (s.situation_title) { %> · <i class="bi bi-map"></i> <%= s.situation_title %><% } %></div>
+                    <% if (s.observations) { %>
+                      <div class="text-secondary small mt-1 fst-italic">"<%= s.observations.substring(0, 80) %><%= s.observations.length > 80 ? '…' : '' %>"</div>
+                    <% } %>
+                  </div>
+                  <div class="text-end ms-2">
+                    <div class="small text-muted text-nowrap"><%= new Date(s.session_date).toLocaleDateString('es-ES') %></div>
+                    <% if (s.rating) { %>
+                      <span class="badge rating-badge rating-<%= s.rating %> mt-1">
+                        <%= s.rating === 'conseguido' ? '✓' : s.rating === 'en_proceso' ? '~' : '!' %>
+                      </span>
+                    <% } %>
+                  </div>
+                </div>
+                <div class="text-muted small mt-1"><i class="bi bi-person me-1"></i><%= s.teacher_name %></div>
+              </div>
+            </div>
+          </a>
+        <% }) %>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

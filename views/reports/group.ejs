@@ -1,0 +1,64 @@
+<%- include('../partials/header') %>
+<% if (!print) { %><%- include('../partials/nav') %><% } %>
+
+<% if (!print) { %>
+<div class="page-content">
+  <div class="d-flex align-items-center gap-3 mb-4 d-print-none">
+    <a href="/reports" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+    <h1 class="h4 fw-bold mb-0">Informe Grupal</h1>
+    <div class="ms-auto">
+      <a href="?course=<%= course || '' %>&group_name=<%= group_name || '' %>&print=1" class="btn btn-outline-secondary btn-sm" target="_blank">
+        <i class="bi bi-printer me-1"></i>Imprimir / PDF
+      </a>
+    </div>
+  </div>
+<% } %>
+
+<div class="<%= print ? 'print-page' : '' %>">
+  <div class="report-header mb-4">
+    <div class="d-flex justify-content-between align-items-start">
+      <div>
+        <% if (centerSettings.logo_path) { %><img src="<%= centerSettings.logo_path %>" height="50" class="mb-2"><% } %>
+        <h2 class="h4 fw-bold mb-0"><%= centerSettings.center_name || 'Centro Educativo' %></h2>
+      </div>
+      <div class="badge bg-success fs-6 px-3 py-2">Informe Grupal</div>
+    </div>
+    <h3 class="h5 mt-3">Grupo: <strong><%= course || '' %> <%= group_name || '' %></strong></h3>
+    <hr>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-bordered table-hover">
+      <thead class="table-dark">
+        <tr>
+          <th>Alumno/a</th>
+          <th class="text-center">Sesiones</th>
+          <th class="text-center text-success">Conseguido</th>
+          <th class="text-center text-warning">En proceso</th>
+          <th class="text-center text-danger">Necesita apoyo</th>
+          <th class="d-print-none"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.forEach(r => { %>
+        <tr>
+          <td><a href="/students/<%= r.student.id %>" class="text-decoration-none fw-semibold"><%= r.student.surname %>, <%= r.student.name %></a></td>
+          <td class="text-center"><%= r.stats?.total || 0 %></td>
+          <td class="text-center fw-semibold text-success"><%= r.stats?.conseguido || 0 %></td>
+          <td class="text-center fw-semibold text-warning"><%= r.stats?.en_proceso || 0 %></td>
+          <td class="text-center fw-semibold text-danger"><%= r.stats?.necesita_apoyo || 0 %></td>
+          <td class="d-print-none">
+            <a href="/reports/student/<%= r.student.id %>" class="btn btn-xs btn-outline-primary">Informe</a>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<% if (!print) { %>
+</div>
+<% } %>
+
+<% if (!print) { %><%- include('../partials/footer') %><% } %>

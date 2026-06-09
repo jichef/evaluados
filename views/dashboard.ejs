@@ -1,0 +1,150 @@
+<%- include('partials/header') %>
+<%- include('partials/nav') %>
+
+<div class="page-content">
+  <%- include('partials/flash') %>
+
+  <!-- Hero action -->
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+      <h1 class="h3 fw-bold mb-0">Hola, <%= currentUser.name.split(' ')[0] %></h1>
+      <p class="text-muted mb-0 small">
+        <i class="bi bi-calendar3 me-1"></i>
+        <%= new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }) %>
+      </p>
+    </div>
+    <a href="/sessions/new" class="btn btn-primary btn-lg fw-semibold d-none d-md-inline-flex gap-2 align-items-center">
+      <i class="bi bi-plus-circle-fill"></i>Registrar Sesión
+    </a>
+  </div>
+
+  <!-- Stats cards -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+      <div class="stat-card card border-0 shadow-sm h-100">
+        <div class="card-body text-center py-3">
+          <div class="stat-icon bg-primary-subtle text-primary mb-2"><i class="bi bi-clock-fill"></i></div>
+          <div class="stat-number"><%= stats.sessions_count %></div>
+          <div class="stat-label">Sesiones hoy</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="stat-card card border-0 shadow-sm h-100">
+        <div class="card-body text-center py-3">
+          <div class="stat-icon bg-success-subtle text-success mb-2"><i class="bi bi-people-fill"></i></div>
+          <div class="stat-number"><%= stats.students_count %></div>
+          <div class="stat-label">Alumnos hoy</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="stat-card card border-0 shadow-sm h-100">
+        <div class="card-body text-center py-3">
+          <div class="stat-icon bg-warning-subtle text-warning mb-2"><i class="bi bi-calendar-week-fill"></i></div>
+          <div class="stat-number"><%= weekStats.count %></div>
+          <div class="stat-label">Esta semana</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="stat-card card border-0 shadow-sm h-100">
+        <div class="card-body text-center py-3 d-flex flex-column justify-content-center">
+          <a href="/sessions/new" class="btn btn-primary w-100 fw-semibold d-md-none">
+            <i class="bi bi-plus-circle-fill me-1"></i>Registrar
+          </a>
+          <a href="/sessions" class="btn btn-outline-secondary w-100 mt-1 mt-md-0 d-md-none small">Ver historial</a>
+          <div class="d-none d-md-block">
+            <div class="stat-icon bg-info-subtle text-info mb-2"><i class="bi bi-mortarboard-fill"></i></div>
+            <div class="stat-number"><%= centerSettings.school_year || '—' %></div>
+            <div class="stat-label">Curso escolar</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <!-- Today's sessions -->
+    <div class="col-lg-7">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+          <h2 class="h6 fw-semibold mb-0"><i class="bi bi-clock-history me-2 text-primary"></i>Sesiones de hoy</h2>
+          <a href="/sessions" class="btn btn-sm btn-outline-secondary">Ver todas</a>
+        </div>
+        <div class="card-body p-0">
+          <% if (todaySessions.length === 0) { %>
+            <div class="text-center py-4 text-muted">
+              <i class="bi bi-calendar-x fs-2 opacity-50 mb-2 d-block"></i>
+              <p class="mb-2">Sin sesiones hoy</p>
+              <a href="/sessions/new" class="btn btn-primary btn-sm">Registrar primera sesión</a>
+            </div>
+          <% } else { %>
+            <div class="list-group list-group-flush">
+              <% todaySessions.forEach(s => { %>
+                <a href="/students/<%= s.student_id %>" class="list-group-item list-group-item-action border-0 py-3">
+                  <div class="d-flex align-items-center gap-3">
+                    <span class="program-dot" style="background:<%= s.color %>"></span>
+                    <div class="flex-grow-1 min-w-0">
+                      <div class="fw-semibold text-truncate"><%= s.student_name %></div>
+                      <div class="text-muted small text-truncate"><%= s.program_name %> · <%= s.activity_name %></div>
+                    </div>
+                    <% if (s.rating) { %>
+                      <span class="badge rating-badge rating-<%= s.rating %>">
+                        <%= s.rating === 'conseguido' ? '✓' : s.rating === 'en_proceso' ? '~' : '!' %>
+                      </span>
+                    <% } %>
+                  </div>
+                </a>
+              <% }) %>
+            </div>
+          <% } %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent students -->
+    <div class="col-lg-5">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent">
+          <h2 class="h6 fw-semibold mb-0"><i class="bi bi-people me-2 text-success"></i>Alumnado reciente</h2>
+        </div>
+        <div class="card-body p-0">
+          <% if (recentStudents.length === 0) { %>
+            <div class="text-center py-4 text-muted">
+              <i class="bi bi-person-x fs-2 opacity-50 mb-2 d-block"></i>
+              <p class="small">Aún no hay alumnado en el historial</p>
+            </div>
+          <% } else { %>
+            <div class="list-group list-group-flush">
+              <% recentStudents.forEach(s => { %>
+                <div class="list-group-item border-0 py-2">
+                  <div class="d-flex align-items-center gap-3">
+                    <div class="student-avatar"><%= s.name.charAt(0) %><%= s.surname.charAt(0) %></div>
+                    <div class="flex-grow-1">
+                      <div class="fw-semibold small"><%= s.surname %>, <%= s.name %></div>
+                      <div class="text-muted small"><%= s.course %><%= s.group_name ? ' · ' + s.group_name : '' %></div>
+                    </div>
+                    <div class="d-flex gap-1">
+                      <a href="/sessions/new?student_id=<%= s.id %>" class="btn btn-xs btn-primary" title="Nueva sesión">
+                        <i class="bi bi-plus"></i>
+                      </a>
+                      <a href="/students/<%= s.id %>" class="btn btn-xs btn-outline-secondary" title="Ver perfil">
+                        <i class="bi bi-eye"></i>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              <% }) %>
+            </div>
+            <div class="card-footer bg-transparent border-0 pt-0">
+              <a href="/students" class="btn btn-sm btn-outline-secondary w-100">Ver todo el alumnado</a>
+            </div>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/footer') %>
