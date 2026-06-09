@@ -13,37 +13,80 @@
     <% } %>
   </div>
 
-  <!-- Program tabs filter -->
-  <div class="card border-0 shadow-sm mb-4">
+  <!-- Filters -->
+  <div class="card border-0 shadow-sm mb-3">
     <div class="card-body py-2">
       <form method="GET" class="row g-2 align-items-end">
-        <div class="col-12 col-md-5">
+        <div class="col-12 col-md-4">
           <input type="text" name="q" class="form-control" placeholder="Buscar actividad..." value="<%= filters.q || '' %>">
         </div>
-        <div class="col-12 col-md-4">
+        <div class="col-6 col-md-3">
           <select name="program_id" class="form-select">
             <option value="">Todos los programas</option>
             <% programs.forEach(p => { %>
-              <option value="<%= p.id %>" <%= filters.program_id == p.id ? 'selected' : '' %>
-                style="color: <%= p.color %>">
+              <option value="<%= p.id %>" <%= filters.program_id == p.id ? 'selected' : '' %>>
                 <%= p.name %>
               </option>
             <% }) %>
           </select>
         </div>
-        <div class="col-12 col-md-3 d-flex gap-2">
+        <div class="col-6 col-md-3">
+          <select name="level" class="form-select">
+            <option value="">Todos los niveles</option>
+            <% educationLevels.forEach(group => { %>
+              <optgroup label="<%= group.stage %>">
+                <% group.levels.forEach(lvl => { %>
+                  <option value="<%= lvl %>" <%= filters.level === lvl ? 'selected' : '' %>><%= lvl %></option>
+                <% }) %>
+              </optgroup>
+            <% }) %>
+          </select>
+        </div>
+        <div class="col-12 col-md-2 d-flex gap-2">
           <button type="submit" class="btn btn-primary btn-sm flex-grow-1"><i class="bi bi-search me-1"></i>Filtrar</button>
-          <a href="/activities" class="btn btn-outline-secondary btn-sm">Limpiar</a>
+          <a href="/activities" class="btn btn-outline-secondary btn-sm">×</a>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- Program filter pills -->
+  <!-- Active filters summary -->
+  <% if (filters.program_id || filters.level || filters.q) { %>
+  <div class="d-flex flex-wrap gap-2 mb-3 align-items-center">
+    <span class="text-muted small">Filtrando por:</span>
+    <% if (filters.q) { %>
+      <span class="badge bg-secondary-subtle text-secondary border">
+        "<%= filters.q %>"
+        <a href="/activities?<%= filters.program_id ? 'program_id=' + filters.program_id + '&' : '' %><%= filters.level ? 'level=' + encodeURIComponent(filters.level) : '' %>" class="text-secondary ms-1">×</a>
+      </span>
+    <% } %>
+    <% if (filters.program_id) { %>
+      <% const fp = programs.find(p => p.id == filters.program_id); %>
+      <% if (fp) { %>
+      <span class="badge border" style="background:<%=fp.color%>20;color:<%=fp.color%>;border-color:<%=fp.color%>40!important">
+        <i class="bi bi-<%=fp.icon%> me-1"></i><%= fp.name %>
+        <a href="/activities?<%= filters.q ? 'q=' + encodeURIComponent(filters.q) + '&' : '' %><%= filters.level ? 'level=' + encodeURIComponent(filters.level) : '' %>" style="color:inherit" class="ms-1">×</a>
+      </span>
+      <% } %>
+    <% } %>
+    <% if (filters.level) { %>
+      <span class="badge bg-info-subtle text-info border">
+        <i class="bi bi-mortarboard me-1"></i><%= filters.level %>
+        <a href="/activities?<%= filters.q ? 'q=' + encodeURIComponent(filters.q) + '&' : '' %><%= filters.program_id ? 'program_id=' + filters.program_id : '' %>" class="text-info ms-1">×</a>
+      </span>
+    <% } %>
+    <span class="text-muted small ms-1"><%= activities.length %> resultado<%= activities.length !== 1 ? 's' : '' %></span>
+  </div>
+  <% } %>
+
+  <!-- Program quick pills (unchanged) -->
   <div class="d-flex flex-wrap gap-2 mb-4">
-    <a href="/activities" class="btn btn-sm <%= !filters.program_id ? 'btn-secondary' : 'btn-outline-secondary' %>">Todos</a>
+    <a href="/activities<%= filters.q ? '?q=' + encodeURIComponent(filters.q) : '' %>"
+      class="btn btn-sm <%= !filters.program_id && !filters.level ? 'btn-secondary' : 'btn-outline-secondary' %>">
+      Todos
+    </a>
     <% programs.forEach(p => { %>
-      <a href="/activities?program_id=<%= p.id %>"
+      <a href="/activities?program_id=<%= p.id %><%= filters.q ? '&q=' + encodeURIComponent(filters.q) : '' %><%= filters.level ? '&level=' + encodeURIComponent(filters.level) : '' %>"
         class="btn btn-sm <%= filters.program_id == p.id ? 'text-white' : 'btn-outline-secondary' %>"
         style="<%= filters.program_id == p.id ? 'background:' + p.color + '; border-color:' + p.color : '' %>">
         <i class="bi bi-<%= p.icon %> me-1"></i><%= p.name %>
@@ -55,7 +98,10 @@
     <div class="text-center py-5 text-muted">
       <i class="bi bi-list-x fs-1 opacity-50 mb-3 d-block"></i>
       <h3 class="h5">Sin actividades</h3>
-      <% if (currentUser.role === 'admin') { %>
+      <% if (filters.program_id || filters.level || filters.q) { %>
+        <p class="small">Prueba a quitar algún filtro.</p>
+        <a href="/activities" class="btn btn-outline-secondary btn-sm">Quitar filtros</a>
+      <% } else if (currentUser.role === 'admin') { %>
         <a href="/activities/new" class="btn btn-primary">Crear actividad</a>
       <% } %>
     </div>
@@ -76,7 +122,16 @@
               <p class="text-muted small mb-2 line-clamp-2"><%= a.description %></p>
             <% } %>
             <% if (a.situation_title) { %>
-              <div class="small text-muted"><i class="bi bi-map me-1"></i><%= a.situation_title %></div>
+              <div class="small text-muted mb-1"><i class="bi bi-map me-1"></i><%= a.situation_title %></div>
+            <% } %>
+            <% if (a.levels) { %>
+              <div class="d-flex flex-wrap gap-1 mt-1">
+                <% a.levels.split(',').forEach(lvl => { %>
+                  <span class="badge bg-info-subtle text-info" style="font-size:.65rem"><%= lvl %></span>
+                <% }) %>
+              </div>
+            <% } else { %>
+              <span class="badge bg-light text-muted" style="font-size:.65rem">Todos los niveles</span>
             <% } %>
           </div>
           <% if (currentUser.role === 'admin') { %>

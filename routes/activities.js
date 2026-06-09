@@ -13,11 +13,16 @@ const EDUCATION_LEVELS = [
 
 router.get('/', (req, res) => {
   const db = getDb();
-  const { program_id, q } = req.query;
+  const { program_id, q, level } = req.query;
   let where = 'WHERE a.active = 1';
   const params = [];
   if (program_id) { where += ' AND a.program_id = ?'; params.push(program_id); }
   if (q) { where += ' AND (a.name LIKE ? OR a.description LIKE ?)'; params.push(`%${q}%`, `%${q}%`); }
+  if (level) {
+    // Match activities with no level (all levels) or containing this level
+    where += " AND (a.levels = '' OR (',' || a.levels || ',') LIKE ?)";
+    params.push(`%,${level},%`);
+  }
 
   const activities = db.prepare(`
     SELECT a.*, p.name AS program_name, p.color, p.icon,
@@ -35,7 +40,8 @@ router.get('/', (req, res) => {
     title: 'Actividades',
     activities,
     programs,
-    filters: { program_id, q },
+    educationLevels: EDUCATION_LEVELS,
+    filters: { program_id, q, level },
   });
 });
 
