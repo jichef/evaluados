@@ -168,25 +168,53 @@ router.post('/criteria/import-lomloe', (req, res) => {
   res.redirect(303, '/admin/criteria');
 });
 
-// ─── Objectives ───────────────────────────────────────
-router.get('/objectives', (req, res) => {
+// ─── Saberes ──────────────────────────────────────────
+const { importLomloeSaberes } = require('../database/lomloe-saberes');
+
+router.get('/saberes', (req, res) => {
   const db = getDb();
-  const objectives = db.prepare('SELECT * FROM objectives WHERE active = 1 ORDER BY area, description').all();
-  res.render('admin/objectives', { title: 'Objetivos', objectives });
+  const { area } = req.query;
+  let query = `
+    SELECT s.*, COUNT(as2.activity_id) AS usage_count,
+           GROUP_CONCAT(c.code, ', ') AS criteria_codes
+    FROM saberes s
+    LEFT JOIN activity_saberes as2 ON s.id = as2.saber_id
+    LEFT JOIN saber_criteria sc ON s.id = sc.saber_id
+    LEFT JOIN criteria c ON sc.criterion_id = c.id
+    WHERE s.active = 1
+  `;
+  const params = [];
+  if (area) { query += ' AND s.area = ?'; params.push(area); }
+  query += ' GROUP BY s.id ORDER BY s.area, s.bloque, s.code';
+  const saberes = db.prepare(query).all(...params);
+  const areas = db.prepare('SELECT DISTINCT area FROM saberes WHERE active=1 ORDER BY area').all().map(r => r.area);
+  res.render('admin/saberes', { title: 'Saberes Básicos', saberes, areas, currentArea: area || '' });
 });
 
-router.post('/objectives', (req, res) => {
+router.post('/saberes', (req, res) => {
   const db = getDb();
-  const { description, area } = req.body;
-  db.prepare('INSERT INTO objectives (description, area) VALUES (?, ?)').run(description, area);
-  req.session.flash = { success: 'Objetivo creado.' };
-  res.redirect('/admin/objectives');
+  const { code, description, area, bloque } = req.body;
+  if (!description) { req.session.flash = { error: 'La descripción es obligatoria.' }; return res.redirect('/admin/saberes'); }
+  db.prepare('INSERT INTO saberes (code, description, area, bloque) VALUES (?, ?, ?, ?)').run(code || null, description, area || null, bloque || null);
+  req.session.flash = { success: 'Saber creado.' };
+  res.redirect('/admin/saberes');
 });
 
-router.post('/objectives/:id/delete', (req, res) => {
+router.post('/saberes/:id/delete', (req, res) => {
   const db = getDb();
-  db.prepare('UPDATE objectives SET active = 0 WHERE id = ?').run(req.params.id);
-  res.redirect('/admin/objectives');
+  db.prepare('UPDATE saberes SET active = 0 WHERE id = ?').run(req.params.id);
+  req.session.flash = { success: 'Saber desactivado.' };
+  res.redirect('/admin/saberes');
+});
+
+router.post('/saberes/import-lomloe', (req, res) => {
+  try {
+    const result = importLomloeSaberes();
+    req.session.flash = { success: `Saberes LOMLOE importados: ${result.inserted} nuevos, ${result.skipped} ya existían. Asociaciones: ${result.links}.` };
+  } catch (err) {
+    req.session.flash = { error: 'Error al importar saberes: ' + err.message };
+  }
+  res.redirect(303, '/admin/saberes');
 });
 
 // ─── Learning Situations ──────────────────────────────
@@ -235,6 +263,52 @@ router.post('/settings', logoUpload.single('logo'), (req, res) => {
 
   req.session.flash = { success: 'Configuración guardada correctamente.' };
   res.redirect('/admin/settings');
+});
+
+// ─── Tags ─────────────────────────────────────────────
+router.get('/tags', (req, res) => {
+  const db = getDb();
+  const tags = db.prepare(`
+    SELECT t.*, COUNT(at2.activity_id) AS usage_count
+    FROM tags t
+    LEFT JOIN activity_tags at2 ON t.id = at2.tag_id
+    GROUP BY t.id
+    ORDER BY t.name
+  `).all();
+  res.render('admin/tags', { title: 'Etiquetas', tags });
+});
+
+router.post('/tags', (req, res) => {
+  const db = getDb();
+  const { name, color } = req.body;
+  if (!name || !name.trim()) {
+    req.session.flash = { error: 'El nombre es obligatorio.' };
+    return res.redirect('/admin/tags');
+  }
+  try {
+    db.prepare('INSERT INTO tags (name, color) VALUES (?, ?)').run(name.trim(), color || '#0d6efd');
+    req.session.flash = { success: 'Etiqueta creada.' };
+  } catch (e) {
+    req.session.flash = { error: 'Ya existe una etiqueta con ese nombre.' };
+  }
+  res.redirect('/admin/tags');
+});
+
+router.post('/tags/:id', (req, res) => {
+  const db = getDb();
+  const { name, color, active } = req.body;
+  db.prepare('UPDATE tags SET name=?, color=?, active=? WHERE id=?')
+    .run(name.trim(), color || '#0d6efd', active === 'on' ? 1 : 0, req.params.id);
+  req.session.flash = { success: 'Etiqueta actualizada.' };
+  res.redirect('/admin/tags');
+});
+
+router.post('/tags/:id/delete', (req, res) => {
+  const db = getDb();
+  db.prepare('DELETE FROM activity_tags WHERE tag_id = ?').run(req.params.id);
+  db.prepare('DELETE FROM tags WHERE id = ?').run(req.params.id);
+  req.session.flash = { success: 'Etiqueta eliminada.' };
+  res.redirect('/admin/tags');
 });
 
 module.exports = router;

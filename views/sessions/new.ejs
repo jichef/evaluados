@@ -155,9 +155,9 @@
               <div id="actDetailMaterials" class="small text-muted mb-1 d-none">
                 <i class="bi bi-tools me-1"></i><span></span>
               </div>
-              <div id="actDetailObjectives" class="mt-2 d-none">
-                <div class="small fw-semibold text-muted mb-1">Objetivos:</div>
-                <ul class="small mb-0" id="actDetailObjectivesList"></ul>
+              <div id="actDetailSaberes" class="mt-2 d-none">
+                <div class="small fw-semibold text-muted mb-1">Saberes:</div>
+                <div id="actDetailSaberesList" class="d-flex flex-wrap gap-1"></div>
               </div>
               <div id="actDetailCriteria" class="mt-2 d-none">
                 <div class="small fw-semibold text-muted mb-1">Criterios:</div>
@@ -599,13 +599,13 @@ async function selectActivity(a) {
     matEl.classList.add('d-none');
   }
 
-  const objEl = document.getElementById('actDetailObjectives');
-  if (details.objectives?.length) {
-    objEl.classList.remove('d-none');
-    document.getElementById('actDetailObjectivesList').innerHTML =
-      details.objectives.map(o => `<li>${o.description}</li>`).join('');
+  const sabEl = document.getElementById('actDetailSaberes');
+  if (details.saberes?.length) {
+    sabEl.classList.remove('d-none');
+    document.getElementById('actDetailSaberesList').innerHTML =
+      details.saberes.map(s => `<span class="badge bg-secondary-subtle text-secondary border" style="font-size:.7rem">${s.code ? s.code+': ' : ''}${s.description.substring(0,50)}${s.description.length>50?'…':''}</span>`).join('');
   } else {
-    objEl.classList.add('d-none');
+    sabEl.classList.add('d-none');
   }
 
   const critEl = document.getElementById('actDetailCriteria');

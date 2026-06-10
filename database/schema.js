@@ -155,6 +155,46 @@ function initDatabase() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS saberes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      code TEXT,
+      description TEXT NOT NULL,
+      area TEXT,
+      bloque TEXT,
+      active INTEGER DEFAULT 1
+    );
+
+    CREATE TABLE IF NOT EXISTS saber_criteria (
+      saber_id INTEGER NOT NULL,
+      criterion_id INTEGER NOT NULL,
+      PRIMARY KEY (saber_id, criterion_id),
+      FOREIGN KEY (saber_id) REFERENCES saberes(id) ON DELETE CASCADE,
+      FOREIGN KEY (criterion_id) REFERENCES criteria(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS activity_saberes (
+      activity_id INTEGER NOT NULL,
+      saber_id INTEGER NOT NULL,
+      PRIMARY KEY (activity_id, saber_id),
+      FOREIGN KEY (activity_id) REFERENCES activities(id) ON DELETE CASCADE,
+      FOREIGN KEY (saber_id) REFERENCES saberes(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS tags (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE,
+      color TEXT NOT NULL DEFAULT '#0d6efd',
+      active INTEGER DEFAULT 1
+    );
+
+    CREATE TABLE IF NOT EXISTS activity_tags (
+      activity_id INTEGER NOT NULL,
+      tag_id INTEGER NOT NULL,
+      PRIMARY KEY (activity_id, tag_id),
+      FOREIGN KEY (activity_id) REFERENCES activities(id) ON DELETE CASCADE,
+      FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+    );
+
     CREATE INDEX IF NOT EXISTS idx_sessions_student ON sessions_log(student_id);
     CREATE INDEX IF NOT EXISTS idx_sessions_teacher ON sessions_log(teacher_id);
     CREATE INDEX IF NOT EXISTS idx_sessions_date ON sessions_log(session_date);

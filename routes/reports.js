@@ -44,19 +44,43 @@ router.get('/student/:id', (req, res) => {
     ORDER BY sl.session_date ASC, sl.created_at ASC
   `).all(...params);
 
-  // Criteria evolution
+  // Criteria evolution with last rating
   const criteriaEvolution = db.prepare(`
     SELECT c.code, c.description, c.area,
            COUNT(sc.id) AS times_worked,
            SUM(CASE WHEN sc.rating = 'conseguido' THEN 1 ELSE 0 END) AS conseguido,
            SUM(CASE WHEN sc.rating = 'en_proceso' THEN 1 ELSE 0 END) AS en_proceso,
            SUM(CASE WHEN sc.rating = 'necesita_apoyo' THEN 1 ELSE 0 END) AS necesita_apoyo,
-           MAX(sc.rating) AS last_rating
+           (SELECT sc2.rating FROM session_criteria sc2
+            JOIN sessions_log sl2 ON sc2.session_id = sl2.id
+            WHERE sc2.criterion_id = c.id AND sl2.student_id = ?
+            ORDER BY sl2.session_date DESC, sl2.created_at DESC LIMIT 1) AS last_rating
     FROM session_criteria sc
     JOIN criteria c ON sc.criterion_id = c.id
     JOIN sessions_log sl ON sc.session_id = sl.id
-    ${where.replace('WHERE sl.', 'WHERE sl.')}
+    ${where}
     GROUP BY c.id ORDER BY c.area, c.code
+  `).all(req.params.id, ...params);
+
+  // Monthly trend
+  const monthlyTrend = db.prepare(`
+    SELECT strftime('%Y-%m', session_date) AS month,
+           COUNT(*) AS total,
+           SUM(CASE WHEN rating = 'conseguido' THEN 1 ELSE 0 END) AS conseguido,
+           SUM(CASE WHEN rating = 'en_proceso' THEN 1 ELSE 0 END) AS en_proceso,
+           SUM(CASE WHEN rating = 'necesita_apoyo' THEN 1 ELSE 0 END) AS necesita_apoyo
+    FROM sessions_log sl ${where}
+    GROUP BY month ORDER BY month
+  `).all(...params);
+
+  // Saberes worked across sessions
+  const saberesWorked = db.prepare(`
+    SELECT DISTINCT s.code, s.description, s.area, s.bloque
+    FROM activity_saberes as2
+    JOIN saberes s ON as2.saber_id = s.id
+    JOIN sessions_log sl ON as2.activity_id = sl.activity_id
+    ${where}
+    ORDER BY s.area, s.bloque, s.code
   `).all(...params);
 
   // Program breakdown
@@ -120,6 +144,8 @@ router.get('/student/:id', (req, res) => {
     sessions,
     criteriaEvolution,
     programBreakdown,
+    monthlyTrend,
+    saberesWorked,
     teachers: teachers.map(t => t.name),
     strengths,
     improvements,
@@ -168,10 +194,14 @@ router.get('/group', (req, res) => {
   const centerSettings = {};
   db.prepare('SELECT * FROM center_settings').all().forEach(r => { centerSettings[r.key] = r.value; });
 
+  const totalSessions = rows.reduce((s, r) => s + (r.stats?.total || 0), 0);
+  const totalConseguido = rows.reduce((s, r) => s + (r.stats?.conseguido || 0), 0);
+
   res.render('reports/group', {
     title: `Informe Grupal – ${course || ''} ${group_name || ''}`,
     rows,
     course, group_name,
+    totalSessions, totalConseguido,
     filters: { program_id, date_from, date_to },
     programs,
     centerSettings,

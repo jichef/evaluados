@@ -1,0 +1,130 @@
+<%- include('../partials/header') %>
+<%- include('../partials/nav') %>
+
+<div class="page-content">
+  <%- include('../partials/flash') %>
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <a href="/admin" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+    <h1 class="h4 fw-bold mb-0"><i class="bi bi-journal-bookmark me-2 text-dark"></i>Saberes Básicos</h1>
+    <form method="POST" action="/admin/saberes/import-lomloe" class="ms-auto"
+      onsubmit="return confirm('¿Importar los saberes básicos LOMLOE? Los existentes no se duplicarán.')">
+      <button type="submit" class="btn btn-outline-dark btn-sm">
+        <i class="bi bi-cloud-download me-1"></i>Importar LOMLOE
+      </button>
+    </form>
+  </div>
+
+  <div class="row g-4">
+    <!-- Sidebar: area filter + add form -->
+    <div class="col-12 col-md-4 col-lg-3">
+
+      <!-- Area filter -->
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body py-2 px-3">
+          <a href="/admin/saberes" class="btn btn-sm w-100 text-start <%= !currentArea ? 'btn-dark' : 'btn-outline-secondary' %> mb-1">
+            Todas las áreas <span class="badge bg-secondary float-end"><%= saberes.length %></span>
+          </a>
+          <% areas.forEach(a => { %>
+          <a href="/admin/saberes?area=<%= encodeURIComponent(a) %>"
+            class="btn btn-sm w-100 text-start mb-1 <%= currentArea === a ? 'btn-dark' : 'btn-outline-secondary' %>">
+            <%= a %>
+          </a>
+          <% }) %>
+        </div>
+      </div>
+
+      <!-- Add form -->
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent fw-semibold small">Añadir saber</div>
+        <div class="card-body">
+          <form method="POST" action="/admin/saberes">
+            <div class="mb-2">
+              <input type="text" name="code" class="form-control form-control-sm" placeholder="Código (ej. LCL-A.5)">
+            </div>
+            <div class="mb-2">
+              <textarea name="description" class="form-control form-control-sm" rows="3"
+                placeholder="Descripción del saber *" required></textarea>
+            </div>
+            <div class="mb-2">
+              <input type="text" name="area" class="form-control form-control-sm" placeholder="Área (ej. Matemáticas)">
+            </div>
+            <div class="mb-3">
+              <input type="text" name="bloque" class="form-control form-control-sm" placeholder="Bloque (ej. A. Sentido numérico)">
+            </div>
+            <button type="submit" class="btn btn-dark btn-sm w-100">
+              <i class="bi bi-plus-circle me-1"></i>Añadir
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Saber list -->
+    <div class="col-12 col-md-8 col-lg-9">
+      <% if (saberes.length === 0) { %>
+      <div class="card border-0 shadow-sm">
+        <div class="card-body text-center text-muted py-5">
+          <i class="bi bi-journal-x fs-2 opacity-50 d-block mb-3"></i>
+          <p>No hay saberes básicos aún.</p>
+          <form method="POST" action="/admin/saberes/import-lomloe"
+            onsubmit="return confirm('¿Importar los saberes básicos LOMLOE?')">
+            <button type="submit" class="btn btn-dark">
+              <i class="bi bi-cloud-download me-1"></i>Importar saberes LOMLOE
+            </button>
+          </form>
+        </div>
+      </div>
+      <% } else { %>
+
+      <%
+        // Group by area + bloque
+        const groups = {};
+        saberes.forEach(s => {
+          const key = (s.area || 'Sin área') + '||' + (s.bloque || 'Sin bloque');
+          if (!groups[key]) groups[key] = { area: s.area || 'Sin área', bloque: s.bloque || 'Sin bloque', items: [] };
+          groups[key].items.push(s);
+        });
+      %>
+
+      <% Object.values(groups).forEach(group => { %>
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-light py-2">
+          <div class="fw-semibold small"><%= group.area %></div>
+          <div class="text-muted" style="font-size:.75rem"><i class="bi bi-collection me-1"></i><%= group.bloque %></div>
+        </div>
+        <ul class="list-group list-group-flush">
+          <% group.items.forEach(s => { %>
+          <li class="list-group-item py-2">
+            <div class="d-flex align-items-start gap-2">
+              <div class="flex-grow-1">
+                <% if (s.code) { %><span class="badge bg-dark-subtle text-dark me-1" style="font-size:.7rem"><%= s.code %></span><% } %>
+                <span class="small"><%= s.description %></span>
+                <% if (s.criteria_codes) { %>
+                <div class="mt-1">
+                  <% s.criteria_codes.split(', ').forEach(code => { %>
+                  <span class="badge bg-secondary-subtle text-secondary border" style="font-size:.65rem"><%= code %></span>
+                  <% }) %>
+                </div>
+                <% } %>
+              </div>
+              <div class="d-flex gap-1 flex-shrink-0">
+                <% if (s.usage_count > 0) { %>
+                <span class="badge bg-success-subtle text-success" title="Actividades que usan este saber"><%= s.usage_count %></span>
+                <% } %>
+                <form method="POST" action="/admin/saberes/<%= s.id %>/delete"
+                  onsubmit="return confirm('¿Desactivar este saber?')">
+                  <button type="submit" class="btn btn-xs btn-outline-danger"><i class="bi bi-archive"></i></button>
+                </form>
+              </div>
+            </div>
+          </li>
+          <% }) %>
+        </ul>
+      </div>
+      <% }) %>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

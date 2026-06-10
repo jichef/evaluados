@@ -54,10 +54,11 @@ router.get('/activities/:id', (req, res) => {
 
   if (!activity) return res.status(404).json({ error: 'Not found' });
 
-  activity.objectives = db.prepare(`
-    SELECT o.* FROM objectives o
-    JOIN activity_objectives ao ON o.id = ao.objective_id
-    WHERE ao.activity_id = ?
+  activity.saberes = db.prepare(`
+    SELECT s.* FROM saberes s
+    JOIN activity_saberes as2 ON s.id = as2.saber_id
+    WHERE as2.activity_id = ?
+    ORDER BY s.area, s.bloque, s.code
   `).all(req.params.id);
 
   activity.criteria = db.prepare(`
@@ -128,6 +129,25 @@ router.get('/programs', (req, res) => {
   const db = getDb();
   const programs = db.prepare('SELECT * FROM programs WHERE active = 1 ORDER BY sort_order').all();
   res.json(programs);
+});
+
+// Tags
+router.get('/tags', (req, res) => {
+  const db = getDb();
+  res.json(db.prepare('SELECT * FROM tags WHERE active = 1 ORDER BY name').all());
+});
+
+router.post('/tags', (req, res) => {
+  const db = getDb();
+  const { name, color } = req.body;
+  if (!name || !name.trim()) return res.status(400).json({ error: 'El nombre es obligatorio.' });
+  try {
+    const result = db.prepare('INSERT INTO tags (name, color) VALUES (?, ?)').run(name.trim(), color || '#0d6efd');
+    const tag = db.prepare('SELECT * FROM tags WHERE id = ?').get(result.lastInsertRowid);
+    res.json(tag);
+  } catch (e) {
+    res.status(409).json({ error: 'Ya existe una etiqueta con ese nombre.' });
+  }
 });
 
 module.exports = router;

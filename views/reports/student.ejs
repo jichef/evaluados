@@ -1,252 +1,502 @@
 <%- include('../partials/header') %>
 <% if (!print) { %><%- include('../partials/nav') %><% } %>
 
+<%
+const totalSess = sessions.length;
+const nConseg = sessions.filter(s => s.rating === 'conseguido').length;
+const nProceso = sessions.filter(s => s.rating === 'en_proceso').length;
+const nApoyo = sessions.filter(s => s.rating === 'necesita_apoyo').length;
+const nSinValorar = totalSess - nConseg - nProceso - nApoyo;
+const pConseg  = totalSess ? Math.round(nConseg / totalSess * 100) : 0;
+const pProceso = totalSess ? Math.round(nProceso / totalSess * 100) : 0;
+const pApoyo   = totalSess ? Math.round(nApoyo / totalSess * 100) : 0;
+const ratingLabel = { conseguido: 'Conseguido', en_proceso: 'En proceso', necesita_apoyo: 'Necesita apoyo' };
+const ratingColor = { conseguido: '#198754', en_proceso: '#ffc107', necesita_apoyo: '#dc3545' };
+const ratingBg    = { conseguido: '#d1e7dd', en_proceso: '#fff3cd', necesita_apoyo: '#f8d7da' };
+
+// Group saberes by area
+const saberAreas = {};
+saberesWorked.forEach(s => {
+  const k = s.area || 'Sin área';
+  if (!saberAreas[k]) saberAreas[k] = [];
+  saberAreas[k].push(s);
+});
+
+// Group sessions by month label
+function monthLabel(m) {
+  const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const [y, mo] = m.split('-');
+  return months[parseInt(mo)-1] + ' ' + y.slice(2);
+}
+const maxMonthTotal = monthlyTrend.length ? Math.max(...monthlyTrend.map(m => m.total)) : 1;
+%>
+
 <% if (!print) { %>
 <div class="page-content">
   <div class="d-flex align-items-center gap-3 mb-4 d-print-none">
     <a href="/reports" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
     <h1 class="h4 fw-bold mb-0">Informe Individual</h1>
     <div class="ms-auto d-flex gap-2">
-      <a href="?<%= Object.entries(filters).filter(([,v]) => v).map(([k,v]) => k+'='+v).join('&') %>&print=1"
+      <!-- Filter form -->
+      <form method="GET" class="d-flex gap-2 align-items-center flex-wrap">
+        <input type="date" name="date_from" class="form-control form-control-sm" value="<%= filters.date_from || '' %>" style="width:140px">
+        <input type="date" name="date_to" class="form-control form-control-sm" value="<%= filters.date_to || '' %>" style="width:140px">
+        <select name="program_id" class="form-select form-select-sm" style="width:160px">
+          <option value="">Todos los programas</option>
+          <% programs.forEach(p => { %>
+          <option value="<%= p.id %>" <%= filters.program_id == p.id ? 'selected':'' %>><%= p.name %></option>
+          <% }) %>
+        </select>
+        <button type="submit" class="btn btn-sm btn-outline-primary"><i class="bi bi-funnel"></i></button>
+      </form>
+      <a href="?<%= Object.entries(filters).filter(([,v])=>v).map(([k,v])=>k+'='+encodeURIComponent(v)).join('&') %>&print=1"
         class="btn btn-outline-secondary btn-sm" target="_blank">
-        <i class="bi bi-printer me-1"></i>Imprimir / PDF
+        <i class="bi bi-printer me-1"></i>PDF
       </a>
     </div>
   </div>
 <% } %>
 
-<div class="<%= print ? 'print-page' : '' %>">
-  <!-- Report header -->
-  <div class="report-header mb-4">
-    <div class="d-flex justify-content-between align-items-start">
-      <div>
-        <% if (centerSettings.logo_path) { %>
-          <img src="<%= centerSettings.logo_path %>" height="50" class="mb-2">
-        <% } %>
-        <h2 class="h4 fw-bold mb-0"><%= centerSettings.center_name || 'Centro Educativo' %></h2>
-        <div class="text-muted small">Curso escolar <%= centerSettings.school_year || '' %></div>
-      </div>
-      <div class="text-end">
-        <div class="badge bg-primary fs-6 px-3 py-2">Informe Individual</div>
-        <div class="text-muted small mt-1">Generado: <%= new Date().toLocaleDateString('es-ES') %></div>
-      </div>
-    </div>
-    <hr>
-  </div>
+<div class="<%= print ? 'print-wrap' : 'report-wrap' %>">
 
-  <!-- Student data -->
-  <div class="card border-0 bg-light mb-4">
-    <div class="card-body">
-      <div class="row">
-        <div class="col-md-8">
-          <h3 class="h4 fw-bold mb-1"><%= student.name %> <%= student.surname %></h3>
-          <div class="text-muted">
-            Curso: <strong><%= student.course || '—' %></strong> &bull;
-            Grupo: <strong><%= student.group_name || '—' %></strong>
-          </div>
+  <!-- ══ CABECERA ══════════════════════════════════════════════════ -->
+  <div class="rep-header">
+    <div class="rep-header-inner">
+      <div class="rep-header-left">
+        <% if (centerSettings.logo_path) { %>
+          <img src="<%= centerSettings.logo_path %>" class="rep-logo" alt="Logo">
+        <% } %>
+        <div>
+          <div class="rep-center-name"><%= centerSettings.center_name || 'Centro Educativo' %></div>
+          <div class="rep-center-year">Curso escolar <%= centerSettings.school_year || '' %></div>
+        </div>
+      </div>
+      <div class="rep-badge rep-badge-primary">Informe Individual</div>
+    </div>
+    <div class="rep-student-bar">
+      <div class="rep-student-avatar"><%= student.name.charAt(0) %><%= student.surname.charAt(0) %></div>
+      <div class="rep-student-info">
+        <div class="rep-student-name"><%= student.name %> <%= student.surname %></div>
+        <div class="rep-student-meta">
+          Curso <strong><%= student.course || '—' %></strong>
+          &nbsp;·&nbsp; Grupo <strong><%= student.group_name || '—' %></strong>
           <% if (filters.date_from || filters.date_to) { %>
-          <div class="text-muted small mt-1">
-            Periodo: <%= filters.date_from ? new Date(filters.date_from).toLocaleDateString('es-ES') : 'Inicio' %> –
-            <%= filters.date_to ? new Date(filters.date_to).toLocaleDateString('es-ES') : 'Actualidad' %>
-          </div>
+          &nbsp;·&nbsp; <%= filters.date_from ? new Date(filters.date_from+'T12:00:00').toLocaleDateString('es-ES') : 'Inicio' %>
+          – <%= filters.date_to ? new Date(filters.date_to+'T12:00:00').toLocaleDateString('es-ES') : 'Actualidad' %>
           <% } %>
         </div>
-        <div class="col-md-4 text-md-end">
-          <div class="text-muted small">Docentes implicados:</div>
-          <div class="small"><%= teachers.join(', ') || '—' %></div>
-        </div>
+        <% if (teachers.length) { %>
+        <div class="rep-teachers"><i class="bi bi-person-check me-1"></i><%= teachers.join(', ') %></div>
+        <% } %>
+      </div>
+      <div class="rep-gen-date">Generado el<br><strong><%= new Date().toLocaleDateString('es-ES') %></strong></div>
+    </div>
+  </div>
+
+  <% if (totalSess === 0) { %>
+  <div class="rep-empty">
+    <i class="bi bi-clipboard-x"></i>
+    <p>Sin sesiones registradas en el periodo seleccionado.</p>
+  </div>
+  <% } else { %>
+
+  <!-- ══ STATS ══════════════════════════════════════════════════════ -->
+  <div class="rep-section">
+    <div class="rep-stats-grid">
+      <div class="rep-stat-card">
+        <div class="rep-stat-num"><%= totalSess %></div>
+        <div class="rep-stat-lbl">Sesiones totales</div>
+      </div>
+      <div class="rep-stat-card rep-stat-green">
+        <div class="rep-stat-num"><%= nConseg %></div>
+        <div class="rep-stat-pct"><%= pConseg %>%</div>
+        <div class="rep-stat-lbl">Conseguido</div>
+      </div>
+      <div class="rep-stat-card rep-stat-yellow">
+        <div class="rep-stat-num"><%= nProceso %></div>
+        <div class="rep-stat-pct"><%= pProceso %>%</div>
+        <div class="rep-stat-lbl">En proceso</div>
+      </div>
+      <div class="rep-stat-card rep-stat-red">
+        <div class="rep-stat-num"><%= nApoyo %></div>
+        <div class="rep-stat-pct"><%= pApoyo %>%</div>
+        <div class="rep-stat-lbl">Necesita apoyo</div>
+      </div>
+    </div>
+    <!-- Stacked rating bar -->
+    <div class="rep-rating-bar-wrap">
+      <div class="rep-rating-bar">
+        <% if (nConseg)  { %><div class="rep-rb-seg rep-rb-green"  style="width:<%= pConseg  %>%"><% if(pConseg>8){%><%= pConseg %>%<%}%></div><% } %>
+        <% if (nProceso) { %><div class="rep-rb-seg rep-rb-yellow" style="width:<%= pProceso %>%"><% if(pProceso>8){%><%= pProceso %>%<%}%></div><% } %>
+        <% if (nApoyo)   { %><div class="rep-rb-seg rep-rb-red"    style="width:<%= pApoyo   %>%"><% if(pApoyo>8){%><%= pApoyo %>%<%}%></div><% } %>
+        <% if (nSinValorar>0){ %><div class="rep-rb-seg rep-rb-gray" style="width:<%= 100-pConseg-pProceso-pApoyo %>%"></div><% } %>
+      </div>
+      <div class="rep-rating-legend">
+        <span class="rep-leg rep-leg-green">Conseguido</span>
+        <span class="rep-leg rep-leg-yellow">En proceso</span>
+        <span class="rep-leg rep-leg-red">Necesita apoyo</span>
       </div>
     </div>
   </div>
 
-  <!-- Executive summary -->
-  <div class="row g-3 mb-4">
-    <div class="col-6 col-md-3">
-      <div class="card border-0 shadow-sm text-center py-3">
-        <div class="stat-number"><%= sessions.length %></div>
-        <div class="stat-label">Sesiones totales</div>
-      </div>
-    </div>
-    <div class="col-6 col-md-3">
-      <div class="card border-0 shadow-sm text-center py-3">
-        <div class="stat-number text-success"><%= sessions.filter(s => s.rating === 'conseguido').length %></div>
-        <div class="stat-label">Conseguido</div>
-      </div>
-    </div>
-    <div class="col-6 col-md-3">
-      <div class="card border-0 shadow-sm text-center py-3">
-        <div class="stat-number text-warning"><%= sessions.filter(s => s.rating === 'en_proceso').length %></div>
-        <div class="stat-label">En proceso</div>
-      </div>
-    </div>
-    <div class="col-6 col-md-3">
-      <div class="card border-0 shadow-sm text-center py-3">
-        <div class="stat-number text-danger"><%= sessions.filter(s => s.rating === 'necesita_apoyo').length %></div>
-        <div class="stat-label">Necesita apoyo</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Program distribution -->
+  <!-- ══ PROGRAMAS ══════════════════════════════════════════════════ -->
   <% if (programBreakdown.length > 0) { %>
-  <div class="card border-0 shadow-sm mb-4">
-    <div class="card-body">
-      <h4 class="h6 fw-bold text-uppercase text-muted mb-3">Participación por programas</h4>
-      <% programBreakdown.forEach(p => { %>
-      <div class="mb-2">
-        <div class="d-flex justify-content-between small mb-1">
-          <span class="fw-semibold"><%= p.name %></span>
-          <span><%= p.count %> sesión<%= p.count !== 1 ? 'es' : '' %></span>
+  <div class="rep-section">
+    <div class="rep-section-title"><i class="bi bi-journal-bookmark me-2"></i>Participación por programas</div>
+    <% programBreakdown.forEach(p => {
+      const tot = p.count;
+      const pC = tot ? Math.round(p.conseguido/tot*100) : 0;
+      const pP = tot ? Math.round(p.en_proceso/tot*100) : 0;
+      const pA = tot ? Math.round(p.necesita_apoyo/tot*100) : 0;
+    %>
+    <div class="rep-prog-row">
+      <div class="rep-prog-name">
+        <span class="rep-prog-dot" style="background:<%= p.color %>"></span>
+        <%= p.name %>
+      </div>
+      <div class="rep-prog-bar-wrap">
+        <div class="rep-rating-bar rep-rating-bar-sm">
+          <% if(pC) { %><div class="rep-rb-seg rep-rb-green"  style="width:<%= pC %>%"></div><% } %>
+          <% if(pP) { %><div class="rep-rb-seg rep-rb-yellow" style="width:<%= pP %>%"></div><% } %>
+          <% if(pA) { %><div class="rep-rb-seg rep-rb-red"    style="width:<%= pA %>%"></div><% } %>
         </div>
-        <div class="progress" style="height: 8px">
-          <div class="progress-bar" style="width: <%= Math.round(p.count / sessions.length * 100) %>%; background: <%= p.color %>"></div>
+      </div>
+      <div class="rep-prog-count"><%= tot %> ses.</div>
+    </div>
+    <% }) %>
+  </div>
+  <% } %>
+
+  <!-- ══ EVOLUCIÓN MENSUAL ══════════════════════════════════════════ -->
+  <% if (monthlyTrend.length > 1) { %>
+  <div class="rep-section">
+    <div class="rep-section-title"><i class="bi bi-graph-up me-2"></i>Evolución mensual</div>
+    <div class="rep-trend-chart">
+      <% monthlyTrend.forEach(m => {
+        const pC = m.total ? Math.round(m.conseguido    / m.total * 100) : 0;
+        const pP = m.total ? Math.round(m.en_proceso    / m.total * 100) : 0;
+        const pA = m.total ? Math.round(m.necesita_apoyo/ m.total * 100) : 0;
+        const hPct = maxMonthTotal ? Math.round(m.total / maxMonthTotal * 100) : 0;
+      %>
+      <div class="rep-trend-col">
+        <div class="rep-trend-total"><%= m.total %></div>
+        <div class="rep-trend-bar-wrap">
+          <div class="rep-trend-bar" style="height:<%= hPct %>%">
+            <div class="rep-trend-seg" style="flex:<%= pC %>;background:#198754" title="Conseguido: <%= m.conseguido %>"></div>
+            <div class="rep-trend-seg" style="flex:<%= pP %>;background:#ffc107" title="En proceso: <%= m.en_proceso %>"></div>
+            <div class="rep-trend-seg" style="flex:<%= pA %>;background:#dc3545" title="N. apoyo: <%= m.necesita_apoyo %>"></div>
+          </div>
         </div>
+        <div class="rep-trend-label"><%= monthLabel(m.month) %></div>
       </div>
       <% }) %>
     </div>
   </div>
   <% } %>
 
-  <!-- Strengths & improvements -->
-  <div class="row g-3 mb-4">
-    <div class="col-md-6">
-      <div class="card border-0 border-success border-start border-4 shadow-sm h-100">
-        <div class="card-body">
-          <h4 class="h6 fw-bold text-success mb-3"><i class="bi bi-star-fill me-2"></i>Fortalezas detectadas</h4>
-          <ul class="mb-0 small">
-            <% strengths.forEach(s => { %><li class="mb-1"><%= s %></li><% }) %>
-          </ul>
-        </div>
-      </div>
+  <!-- ══ FORTALEZAS Y SEGUIMIENTO ═══════════════════════════════════ -->
+  <div class="rep-section rep-section-2col">
+    <div class="rep-obs-card rep-obs-green">
+      <div class="rep-obs-title"><i class="bi bi-star-fill me-2"></i>Fortalezas detectadas</div>
+      <ul class="rep-obs-list">
+        <% strengths.forEach(s => { %><li><%= s %></li><% }) %>
+      </ul>
     </div>
-    <div class="col-md-6">
-      <div class="card border-0 border-warning border-start border-4 shadow-sm h-100">
-        <div class="card-body">
-          <h4 class="h6 fw-bold text-warning mb-3"><i class="bi bi-arrow-up-circle-fill me-2"></i>Aspectos de seguimiento</h4>
-          <ul class="mb-0 small">
-            <% improvements.forEach(s => { %><li class="mb-1"><%= s %></li><% }) %>
-          </ul>
-        </div>
-      </div>
+    <div class="rep-obs-card rep-obs-amber">
+      <div class="rep-obs-title"><i class="bi bi-arrow-up-circle-fill me-2"></i>Aspectos de seguimiento</div>
+      <ul class="rep-obs-list">
+        <% improvements.forEach(s => { %><li><%= s %></li><% }) %>
+      </ul>
     </div>
   </div>
 
-  <!-- Session details -->
-  <div class="card border-0 shadow-sm mb-4">
-    <div class="card-body">
-      <h4 class="h6 fw-bold text-uppercase text-muted mb-3">Registro detallado de sesiones</h4>
-      <% if (sessions.length === 0) { %>
-        <p class="text-muted">Sin sesiones registradas en el periodo seleccionado.</p>
-      <% } else { %>
-        <div class="table-responsive">
-          <table class="table table-sm table-hover">
-            <thead class="table-light">
-              <tr>
-                <th>Fecha</th>
-                <th>Programa</th>
-                <th>Actividad</th>
-                <th>Situación</th>
-                <th>Valoración</th>
-                <th>Observaciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              <% sessions.forEach(s => { %>
-              <tr>
-                <td class="text-nowrap small"><%= new Date(s.session_date).toLocaleDateString('es-ES') %></td>
-                <td>
-                  <span class="program-pill small" style="background: <%= s.color %>20; color: <%= s.color %>">
-                    <%= s.program_name %>
-                  </span>
-                </td>
-                <td class="small"><%= s.activity_name %></td>
-                <td class="small text-muted"><%= s.situation_title || '—' %></td>
-                <td>
-                  <% if (s.rating) { %>
-                    <span class="badge rating-badge rating-<%= s.rating %>">
-                      <%= s.rating === 'conseguido' ? 'C' : s.rating === 'en_proceso' ? 'P' : 'A' %>
-                    </span>
-                  <% } else { %>—<% } %>
-                </td>
-                <td class="small text-muted" style="max-width: 200px"><%= s.observations ? s.observations.substring(0, 80) + (s.observations.length > 80 ? '…' : '') : '—' %></td>
-              </tr>
-              <% }) %>
-            </tbody>
-          </table>
-        </div>
-        <div class="small text-muted mt-1">C = Conseguido · P = En proceso · A = Necesita apoyo</div>
-      <% } %>
-    </div>
-  </div>
-
-  <!-- Criteria evolution -->
+  <!-- ══ CRITERIOS DE EVALUACIÓN ════════════════════════════════════ -->
   <% if (criteriaEvolution.length > 0) { %>
-  <div class="card border-0 shadow-sm mb-4">
-    <div class="card-body">
-      <h4 class="h6 fw-bold text-uppercase text-muted mb-3">Evolución por criterios de evaluación</h4>
-      <div class="table-responsive">
-        <table class="table table-sm">
-          <thead class="table-light">
-            <tr>
-              <th>Criterio</th>
-              <th>Área</th>
-              <th>Sesiones</th>
-              <th>Conseguido</th>
-              <th>En proceso</th>
-              <th>Necesita apoyo</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% criteriaEvolution.forEach(c => { %>
-            <tr>
-              <td><% if (c.code) { %><strong><%= c.code %>:</strong> <% } %><%= c.description.substring(0, 60) %><%= c.description.length > 60 ? '…' : '' %></td>
-              <td class="small text-muted"><%= c.area || '—' %></td>
-              <td class="text-center"><%= c.times_worked %></td>
-              <td class="text-center text-success fw-semibold"><%= c.conseguido || 0 %></td>
-              <td class="text-center text-warning fw-semibold"><%= c.en_proceso || 0 %></td>
-              <td class="text-center text-danger fw-semibold"><%= c.necesita_apoyo || 0 %></td>
-            </tr>
-            <% }) %>
-          </tbody>
-        </table>
+  <div class="rep-section rep-page-break-before">
+    <div class="rep-section-title"><i class="bi bi-check2-square me-2"></i>Criterios de evaluación</div>
+    <%
+      const critAreas = {};
+      criteriaEvolution.forEach(c => { const k=c.area||'Sin área'; if(!critAreas[k]) critAreas[k]=[]; critAreas[k].push(c); });
+
+      // Weighted average: conseguido=3, en_proceso=2, necesita_apoyo=1
+      function avgRating(c) {
+        const tot = c.conseguido + c.en_proceso + c.necesita_apoyo;
+        if (!tot) return null;
+        const score = (c.conseguido * 3 + c.en_proceso * 2 + c.necesita_apoyo * 1) / tot;
+        if (score >= 2.5) return 'conseguido';
+        if (score >= 1.5) return 'en_proceso';
+        return 'necesita_apoyo';
+      }
+      const ratingIcon = { conseguido: '✓', en_proceso: '~', necesita_apoyo: '!' };
+    %>
+    <% Object.entries(critAreas).forEach(([area, items]) => { %>
+    <div class="rep-crit-area"><%= area %></div>
+    <% items.forEach(c => {
+      const tot = c.times_worked;
+      const pC3 = tot ? Math.round(c.conseguido/tot*100) : 0;
+      const pP3 = tot ? Math.round(c.en_proceso/tot*100) : 0;
+      const pA3 = tot ? Math.round(c.necesita_apoyo/tot*100) : 0;
+      const avg = avgRating(c);
+    %>
+    <div class="rep-crit-row">
+      <div class="rep-crit-info">
+        <% if(c.code){%><span class="rep-crit-code"><%= c.code %></span><% } %>
+        <span class="rep-crit-desc"><%= c.description %></span>
+      </div>
+      <div class="rep-crit-right">
+        <div class="rep-mini-bar" title="Conseguido: <%= c.conseguido %> · En proceso: <%= c.en_proceso %> · Necesita apoyo: <%= c.necesita_apoyo %>">
+          <% if(pC3){ %><div style="width:<%= pC3 %>%;background:#198754"></div><% } %>
+          <% if(pP3){ %><div style="width:<%= pP3 %>%;background:#ffc107"></div><% } %>
+          <% if(pA3){ %><div style="width:<%= pA3 %>%;background:#dc3545"></div><% } %>
+        </div>
+        <% if (avg) { %>
+        <span class="rep-avg-badge rep-avg-<%= avg %>">
+          <%= ratingIcon[avg] %> <%= ratingLabel[avg] %>
+        </span>
+        <% } %>
+        <span class="rep-crit-count"><%= tot %> ses.</span>
       </div>
     </div>
+    <% }) %>
+    <% }) %>
   </div>
   <% } %>
 
-  <!-- Recommendations (editable on screen) -->
+  <!-- ══ SABERES TRABAJADOS ══════════════════════════════════════════ -->
+  <% if (saberesWorked.length > 0) { %>
+  <div class="rep-section">
+    <div class="rep-section-title"><i class="bi bi-journal-bookmark-fill me-2"></i>Saberes básicos trabajados</div>
+    <% Object.entries(saberAreas).forEach(([area, items]) => { %>
+    <div class="rep-crit-area"><%= area %></div>
+    <% items.forEach(s => { %>
+    <div class="rep-saber-row">
+      <% if(s.code){ %><span class="rep-saber-code"><%= s.code %></span><% } %>
+      <span class="rep-saber-desc"><%= s.description %></span>
+      <% if(s.bloque){ %><span class="rep-saber-bloque"><%= s.bloque %></span><% } %>
+    </div>
+    <% }) %>
+    <% }) %>
+  </div>
+  <% } %>
+
+  <!-- ══ REGISTRO DE SESIONES ═══════════════════════════════════════ -->
+  <div class="rep-section rep-page-break-before">
+    <div class="rep-section-title"><i class="bi bi-calendar3 me-2"></i>Registro de sesiones</div>
+    <table class="rep-table">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Programa</th>
+          <th>Actividad</th>
+          <th>Valoración</th>
+          <th class="rep-col-obs">Observaciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% sessions.forEach(s => { %>
+        <tr>
+          <td class="rep-date"><%= new Date(s.session_date+'T12:00:00').toLocaleDateString('es-ES',{day:'2-digit',month:'short',year:'numeric'}) %></td>
+          <td><span class="rep-prog-chip" style="background:<%= s.color %>18;color:<%= s.color %>;border:1px solid <%= s.color %>40"><%= s.program_name %></span></td>
+          <td class="rep-act-name"><%= s.activity_name %></td>
+          <td>
+            <% if (s.rating) { %>
+            <span class="rep-rating-chip" style="background:<%= ratingBg[s.rating] %>;color:<%= ratingColor[s.rating] %>">
+              <%= ratingLabel[s.rating] %>
+            </span>
+            <% } else { %><span class="rep-no-val">—</span><% } %>
+          </td>
+          <td class="rep-obs-text"><%= s.observations || '' %></td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ══ RECOMENDACIONES ════════════════════════════════════════════ -->
   <% if (!print) { %>
-  <div class="card border-0 shadow-sm mb-4 d-print-none">
-    <div class="card-body">
-      <h4 class="h6 fw-bold text-uppercase text-muted mb-2">Recomendaciones educativas</h4>
-      <textarea class="form-control" rows="4" placeholder="Escribe aquí las recomendaciones para este alumno/a (este campo no se guardará automáticamente, cópialo antes de imprimir)..."></textarea>
-    </div>
+  <div class="rep-section d-print-none">
+    <div class="rep-section-title"><i class="bi bi-pencil-square me-2"></i>Recomendaciones educativas</div>
+    <textarea class="form-control" rows="4"
+      placeholder="Escribe aquí las recomendaciones para este alumno/a antes de imprimir..."></textarea>
+  </div>
+  <% } else { %>
+  <div class="rep-section rep-rec-print">
+    <div class="rep-section-title">Recomendaciones educativas</div>
+    <div class="rep-rec-lines"></div>
   </div>
   <% } %>
 
-  <!-- Footer -->
-  <div class="report-footer mt-4 pt-3 border-top">
-    <div class="d-flex justify-content-between small text-muted">
-      <span><%= centerSettings.center_name || '' %> &bull; Curso <%= centerSettings.school_year || '' %></span>
-      <span><%= centerSettings.footer_text || '' %></span>
-    </div>
-  </div>
-</div>
+  <% } /* end totalSess > 0 */ %>
 
-<% if (!print) { %>
-</div><!-- page-content -->
-<% } %>
+  <!-- ══ PIE ════════════════════════════════════════════════════════ -->
+  <div class="rep-footer">
+    <span><%= centerSettings.center_name || '' %> &bull; Curso <%= centerSettings.school_year || '' %></span>
+    <span><%= centerSettings.footer_text || '' %></span>
+  </div>
+
+</div><!-- report-wrap -->
+
+<% if (!print) { %></div><!-- page-content --><% } %>
+
+<!-- ══ ESTILOS ════════════════════════════════════════════════════════ -->
+<style>
+:root {
+  --rep-green: #198754; --rep-yellow: #e6a817; --rep-red: #dc3545;
+  --rep-green-bg: #d1e7dd; --rep-yellow-bg: #fff3cd; --rep-red-bg: #f8d7da;
+}
+
+.report-wrap { max-width: 900px; margin: 0 auto; }
+.print-wrap  { max-width: 800px; margin: 0 auto; padding: 10px; }
+
+/* Header */
+.rep-header { background: #f8f9fa; border-radius: 10px; overflow: hidden; margin-bottom: 1.5rem; border: 1px solid #e9ecef; }
+.rep-header-inner { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.25rem; }
+.rep-header-left { display: flex; align-items: center; gap: .75rem; }
+.rep-logo { height: 44px; object-fit: contain; }
+.rep-center-name { font-size: 1rem; font-weight: 700; color: #212529; }
+.rep-center-year { font-size: .78rem; color: #6c757d; }
+.rep-badge { font-size: .75rem; font-weight: 700; padding: .4rem .9rem; border-radius: 6px; text-transform: uppercase; letter-spacing: .04em; }
+.rep-badge-primary { background: #0d6efd; color: #fff; }
+.rep-student-bar { background: #fff; display: flex; align-items: center; gap: 1rem; padding: .9rem 1.25rem; border-top: 1px solid #e9ecef; }
+.rep-student-avatar { width: 46px; height: 46px; border-radius: 50%; background: #0d6efd; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1rem; font-weight: 700; flex-shrink: 0; }
+.rep-student-name { font-size: 1.1rem; font-weight: 700; }
+.rep-student-meta { font-size: .8rem; color: #6c757d; }
+.rep-teachers { font-size: .75rem; color: #6c757d; margin-top: .15rem; }
+.rep-gen-date { margin-left: auto; text-align: right; font-size: .75rem; color: #6c757d; }
+
+/* Sections */
+.rep-section { margin-bottom: 1.75rem; background: #fff; border: 1px solid #e9ecef; border-radius: 8px; padding: 1.1rem 1.25rem; }
+.rep-section-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; background: transparent; border: none; padding: 0; }
+.rep-section-title { font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #6c757d; margin-bottom: .9rem; padding-bottom: .4rem; border-bottom: 2px solid #f0f0f0; }
+.rep-empty { text-align: center; padding: 3rem; color: #6c757d; font-size: 1.1rem; }
+.rep-empty i { font-size: 2.5rem; display: block; margin-bottom: .75rem; opacity: .4; }
+
+/* Stats */
+.rep-stats-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: .75rem; margin-bottom: .75rem; }
+.rep-stat-card { background: #f8f9fa; border-radius: 8px; padding: .75rem; text-align: center; }
+.rep-stat-card.rep-stat-green { background: var(--rep-green-bg); }
+.rep-stat-card.rep-stat-yellow { background: var(--rep-yellow-bg); }
+.rep-stat-card.rep-stat-red { background: var(--rep-red-bg); }
+.rep-stat-num { font-size: 2rem; font-weight: 800; line-height: 1; }
+.rep-stat-pct { font-size: .7rem; color: #6c757d; margin: .1rem 0; }
+.rep-stat-lbl { font-size: .72rem; color: #495057; font-weight: 600; }
+
+/* Rating bars */
+.rep-rating-bar-wrap { margin-top: .5rem; }
+.rep-rating-bar { display: flex; height: 22px; border-radius: 4px; overflow: hidden; background: #e9ecef; width: 100%; }
+.rep-rating-bar-sm { height: 14px; }
+.rep-rb-seg { display: flex; align-items: center; justify-content: center; font-size: .65rem; font-weight: 700; color: #fff; transition: width .3s; min-width: 0; }
+.rep-rb-green  { background: var(--rep-green); }
+.rep-rb-yellow { background: var(--rep-yellow); }
+.rep-rb-red    { background: var(--rep-red); }
+.rep-rb-gray   { background: #ced4da; }
+.rep-rating-legend { display: flex; gap: 1rem; margin-top: .4rem; font-size: .7rem; }
+.rep-leg::before { content: '●'; margin-right: .3rem; }
+.rep-leg-green  { color: var(--rep-green); }
+.rep-leg-yellow { color: var(--rep-yellow); }
+.rep-leg-red    { color: var(--rep-red); }
+
+/* Programs */
+.rep-prog-row { display: flex; align-items: center; gap: .75rem; margin-bottom: .5rem; }
+.rep-prog-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+.rep-prog-name { font-size: .82rem; font-weight: 600; min-width: 140px; display: flex; align-items: center; gap: .4rem; }
+.rep-prog-bar-wrap { flex: 1; }
+.rep-prog-count { font-size: .75rem; color: #6c757d; min-width: 45px; text-align: right; }
+
+/* Monthly trend chart */
+.rep-trend-chart { display: flex; align-items: flex-end; gap: 10px; height: 130px; padding: 4px 0 0; }
+.rep-trend-col { display: flex; flex-direction: column; align-items: center; flex: 1; max-width: 80px; height: 100%; }
+.rep-trend-total { font-size: .72rem; font-weight: 700; color: #495057; margin-bottom: 3px; line-height: 1; }
+.rep-trend-bar-wrap { flex: 1; width: 100%; display: flex; align-items: flex-end; }
+.rep-trend-bar { width: 100%; display: flex; flex-direction: column-reverse; border-radius: 4px 4px 0 0; overflow: hidden; min-height: 4px; transition: height .3s; }
+.rep-trend-seg { min-height: 0; }
+.rep-trend-label { font-size: .72rem; color: #6c757d; margin-top: 5px; text-align: center; white-space: nowrap; border-top: 1px solid #e9ecef; padding-top: 4px; width: 100%; }
+
+/* Observations */
+.rep-obs-card { border-radius: 8px; padding: 1rem 1.1rem; border-left: 4px solid; }
+.rep-obs-card.rep-obs-green { background: #f0fdf4; border-color: var(--rep-green); }
+.rep-obs-card.rep-obs-amber { background: #fffbeb; border-color: var(--rep-yellow); }
+.rep-obs-title { font-size: .8rem; font-weight: 700; margin-bottom: .6rem; }
+.rep-obs-green .rep-obs-title { color: var(--rep-green); }
+.rep-obs-amber .rep-obs-title { color: var(--rep-yellow); }
+.rep-obs-list { margin: 0; padding-left: 1.1rem; font-size: .82rem; line-height: 1.6; }
+
+/* Criteria */
+.rep-crit-area { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #6c757d; background: #f3f4f6; padding: .25rem .6rem; border-radius: 4px; margin: .6rem 0 .4rem; }
+.rep-crit-row { display: flex; align-items: center; gap: .75rem; padding: .4rem 0; border-bottom: 1px solid #f3f4f6; }
+.rep-crit-info { flex: 1; font-size: .8rem; line-height: 1.4; }
+.rep-crit-code { font-weight: 700; margin-right: .3rem; }
+.rep-crit-desc { color: #495057; }
+.rep-crit-right { display: flex; align-items: center; gap: .5rem; flex-shrink: 0; }
+.rep-mini-bar { width: 80px; height: 8px; display: flex; border-radius: 3px; overflow: hidden; background: #e9ecef; flex-shrink: 0; }
+.rep-mini-bar div { min-width: 0; }
+.rep-avg-badge { font-size: .7rem; padding: .2rem .55rem; border-radius: 4px; font-weight: 700; white-space: nowrap; }
+.rep-avg-conseguido    { background: #d1e7dd; color: #198754; }
+.rep-avg-en_proceso    { background: #fff3cd; color: #856404; }
+.rep-avg-necesita_apoyo{ background: #f8d7da; color: #842029; }
+.rep-crit-count { font-size: .68rem; color: #adb5bd; min-width: 22px; text-align: right; }
+
+/* Saberes */
+.rep-saber-row { display: flex; align-items: baseline; gap: .5rem; padding: .3rem 0; border-bottom: 1px solid #f3f4f6; font-size: .82rem; line-height: 1.4; }
+.rep-saber-row:last-child { border-bottom: none; }
+.rep-saber-code { font-weight: 700; color: #0d6efd; white-space: nowrap; flex-shrink: 0; }
+.rep-saber-desc { flex: 1; color: #212529; }
+.rep-saber-bloque { font-size: .68rem; color: #adb5bd; white-space: nowrap; flex-shrink: 0; }
+
+/* Session table */
+.rep-table { width: 100%; border-collapse: collapse; font-size: .8rem; }
+.rep-table th { background: #f3f4f6; padding: .45rem .6rem; font-weight: 700; font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; color: #6c757d; border-bottom: 2px solid #e9ecef; text-align: left; }
+.rep-table td { padding: .4rem .6rem; border-bottom: 1px solid #f3f4f6; vertical-align: top; }
+.rep-table tr:last-child td { border-bottom: none; }
+.rep-table tr:hover td { background: #fafafa; }
+.rep-date { white-space: nowrap; color: #6c757d; }
+.rep-act-name { color: #212529; }
+.rep-prog-chip { font-size: .7rem; padding: .15rem .45rem; border-radius: 4px; white-space: nowrap; font-weight: 600; }
+.rep-rating-chip { font-size: .72rem; padding: .2rem .5rem; border-radius: 4px; font-weight: 600; white-space: nowrap; }
+.rep-col-obs { width: 35%; }
+.rep-obs-text { color: #6c757d; font-size: .75rem; }
+.rep-no-val { color: #ced4da; }
+
+/* Recommendations print */
+.rep-rec-print { background: #fff; }
+.rep-rec-lines { height: 80px; background-image: repeating-linear-gradient(transparent, transparent 23px, #e9ecef 23px, #e9ecef 24px); }
+
+/* Footer */
+.rep-footer { display: flex; justify-content: space-between; font-size: .72rem; color: #6c757d; padding-top: .75rem; border-top: 1px solid #e9ecef; margin-top: 1rem; }
+
+/* Page break helpers */
+.rep-page-break-before { page-break-before: auto; }
+
+/* ══ PRINT ════════════════════════════════════════════════════════ */
+@media print {
+  @page { margin: 1.2cm 1.2cm 1.2cm 1.2cm; size: A4; }
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
+  html { zoom: 0.62; }
+  body { font-size: 9pt; }
+  .sidebar, nav, .btn, .d-print-none, textarea, form { display: none !important; }
+  .print-wrap { max-width: 100%; padding: 0; }
+  .page-content { padding: 0 !important; }
+
+  .rep-header { border-radius: 0; border: none; background: #f8f9fa !important; margin-bottom: 1rem; }
+  .rep-section { page-break-inside: avoid; border: 1px solid #ddd; border-radius: 4px; padding: .7rem .9rem; margin-bottom: 1rem; }
+  .rep-section-2col { page-break-inside: avoid; }
+  .rep-obs-card { padding: .7rem; }
+  .rep-stats-grid { grid-template-columns: repeat(4,1fr); gap: .4rem; }
+  .rep-stat-num { font-size: 1.5rem; }
+  .rep-rating-bar { height: 16px; }
+  .rep-rating-bar-sm { height: 10px; }
+  .rep-page-break-before { page-break-before: always; }
+  .rep-trend-chart { height: 90px; gap: 6px; }
+  .rep-trend-label { font-size: 6.5pt; }
+  .rep-table th, .rep-table td { padding: .3rem .4rem; font-size: 7.5pt; }
+  .rep-crit-row { padding: .25rem 0; }
+  .rep-footer { margin-top: .5rem; padding-top: .5rem; font-size: 7.5pt; }
+}
+</style>
 
 <% if (print) { %>
-<style>
-  @media print {
-    body { margin: 0; padding: 20px; }
-    .sidebar, nav, .btn { display: none !important; }
-  }
-</style>
 <script>window.onload = () => window.print();</script>
 <% } %>
 
-<% if (!print) { %>
-<%- include('../partials/footer') %>
-<% } %>
+<% if (!print) { %><%- include('../partials/footer') %><% } %>

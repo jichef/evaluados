@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "import-lomloe": "node database/lomloe-criteria.js"
+    "import-lomloe": "node database/lomloe-criteria.js",
+    "import-saberes": "node database/lomloe-saberes.js"
   },
   "dependencies": {
     "archiver": "^6.0.1",

@@ -1,64 +1,373 @@
 <%- include('../partials/header') %>
 <% if (!print) { %><%- include('../partials/nav') %><% } %>
 
+<%
+const totalStudents = rows.length;
+const studentsWithSessions = rows.filter(r => (r.stats?.total || 0) > 0).length;
+const pConsegGlobal = totalSessions ? Math.round(totalConseguido / totalSessions * 100) : 0;
+const ratingBg    = { conseguido: '#d1e7dd', en_proceso: '#fff3cd', necesita_apoyo: '#f8d7da' };
+const ratingColor = { conseguido: '#198754', en_proceso: '#e6a817', necesita_apoyo: '#dc3545' };
+%>
+
 <% if (!print) { %>
 <div class="page-content">
   <div class="d-flex align-items-center gap-3 mb-4 d-print-none">
     <a href="/reports" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
     <h1 class="h4 fw-bold mb-0">Informe Grupal</h1>
-    <div class="ms-auto">
-      <a href="?course=<%= course || '' %>&group_name=<%= group_name || '' %>&print=1" class="btn btn-outline-secondary btn-sm" target="_blank">
-        <i class="bi bi-printer me-1"></i>Imprimir / PDF
+    <div class="ms-auto d-flex gap-2">
+      <form method="GET" class="d-flex gap-2 align-items-center flex-wrap">
+        <input type="hidden" name="course" value="<%= course || '' %>">
+        <input type="hidden" name="group_name" value="<%= group_name || '' %>">
+        <input type="date" name="date_from" class="form-control form-control-sm" value="<%= filters.date_from || '' %>" style="width:140px">
+        <input type="date" name="date_to" class="form-control form-control-sm" value="<%= filters.date_to || '' %>" style="width:140px">
+        <select name="program_id" class="form-select form-select-sm" style="width:160px">
+          <option value="">Todos los programas</option>
+          <% programs.forEach(p => { %>
+          <option value="<%= p.id %>" <%= filters.program_id == p.id ? 'selected':'' %>><%= p.name %></option>
+          <% }) %>
+        </select>
+        <button type="submit" class="btn btn-sm btn-outline-primary"><i class="bi bi-funnel"></i></button>
+      </form>
+      <a href="?course=<%= encodeURIComponent(course||'') %>&group_name=<%= encodeURIComponent(group_name||'') %><%= filters.program_id ? '&program_id='+filters.program_id : '' %><%= filters.date_from ? '&date_from='+filters.date_from : '' %><%= filters.date_to ? '&date_to='+filters.date_to : '' %>&print=1"
+        class="btn btn-outline-secondary btn-sm" target="_blank">
+        <i class="bi bi-printer me-1"></i>PDF
       </a>
     </div>
   </div>
 <% } %>
 
-<div class="<%= print ? 'print-page' : '' %>">
-  <div class="report-header mb-4">
-    <div class="d-flex justify-content-between align-items-start">
-      <div>
-        <% if (centerSettings.logo_path) { %><img src="<%= centerSettings.logo_path %>" height="50" class="mb-2"><% } %>
-        <h2 class="h4 fw-bold mb-0"><%= centerSettings.center_name || 'Centro Educativo' %></h2>
+<div class="<%= print ? 'grp-print-wrap' : 'grp-wrap' %>">
+
+  <!-- ══ CABECERA ══════════════════════════════════════════════════ -->
+  <div class="grp-header">
+    <div class="grp-header-top">
+      <div class="grp-header-left">
+        <% if (centerSettings.logo_path) { %>
+        <img src="<%= centerSettings.logo_path %>" class="grp-logo" alt="Logo">
+        <% } %>
+        <div>
+          <div class="grp-center-name"><%= centerSettings.center_name || 'Centro Educativo' %></div>
+          <div class="grp-center-year">Curso escolar <%= centerSettings.school_year || '' %></div>
+        </div>
       </div>
-      <div class="badge bg-success fs-6 px-3 py-2">Informe Grupal</div>
+      <div class="grp-badge">Informe Grupal</div>
     </div>
-    <h3 class="h5 mt-3">Grupo: <strong><%= course || '' %> <%= group_name || '' %></strong></h3>
-    <hr>
+    <div class="grp-group-bar">
+      <div class="grp-group-icon"><i class="bi bi-people-fill"></i></div>
+      <div>
+        <div class="grp-group-name">
+          <% if (course) { %>Curso <strong><%= course %></strong><% } %>
+          <% if (group_name) { %>&nbsp;·&nbsp; Grupo <strong><%= group_name %></strong><% } %>
+        </div>
+        <div class="grp-group-meta">
+          <% if (filters.date_from || filters.date_to) { %>
+          <%= filters.date_from ? new Date(filters.date_from+'T12:00:00').toLocaleDateString('es-ES') : 'Inicio' %>
+          – <%= filters.date_to ? new Date(filters.date_to+'T12:00:00').toLocaleDateString('es-ES') : 'Actualidad' %>
+          &nbsp;·&nbsp;
+          <% } %>
+          <%= studentsWithSessions %> de <%= totalStudents %> alumnos con actividad
+        </div>
+      </div>
+      <div class="grp-gen-date">Generado el<br><strong><%= new Date().toLocaleDateString('es-ES') %></strong></div>
+    </div>
   </div>
 
-  <div class="table-responsive">
-    <table class="table table-bordered table-hover">
-      <thead class="table-dark">
+  <!-- ══ RESUMEN GLOBAL ═════════════════════════════════════════════ -->
+  <div class="grp-summary-row">
+    <div class="grp-sum-card">
+      <div class="grp-sum-num"><%= totalStudents %></div>
+      <div class="grp-sum-lbl">Alumnos</div>
+    </div>
+    <div class="grp-sum-card">
+      <div class="grp-sum-num"><%= totalSessions %></div>
+      <div class="grp-sum-lbl">Sesiones totales</div>
+    </div>
+    <div class="grp-sum-card grp-sum-green">
+      <div class="grp-sum-num"><%= totalConseguido %></div>
+      <div class="grp-sum-pct"><%= pConsegGlobal %>%</div>
+      <div class="grp-sum-lbl">Conseguido</div>
+    </div>
+    <div class="grp-sum-card grp-sum-blue">
+      <div class="grp-sum-num"><%= totalSessions > 0 ? (totalSessions/Math.max(studentsWithSessions,1)).toFixed(1) : 0 %></div>
+      <div class="grp-sum-lbl">Sesiones/alumno</div>
+    </div>
+  </div>
+
+  <!-- Barra global -->
+  <% if (totalSessions > 0) {
+    const totalE = rows.reduce((s,r)=>s+(r.stats?.en_proceso||0),0);
+    const totalA = rows.reduce((s,r)=>s+(r.stats?.necesita_apoyo||0),0);
+    const pC = Math.round(totalConseguido/totalSessions*100);
+    const pP = Math.round(totalE/totalSessions*100);
+    const pA = Math.round(totalA/totalSessions*100);
+  %>
+  <div class="grp-global-bar-wrap">
+    <div class="grp-global-bar-label">Distribución global de valoraciones</div>
+    <div class="grp-global-bar">
+      <% if(pC){ %><div class="grp-gb-seg grp-gb-green" style="width:<%= pC %>%"><% if(pC>6){%><%= pC %>%<%}%></div><% } %>
+      <% if(pP){ %><div class="grp-gb-seg grp-gb-yellow" style="width:<%= pP %>%"><% if(pP>6){%><%= pP %>%<%}%></div><% } %>
+      <% if(pA){ %><div class="grp-gb-seg grp-gb-red" style="width:<%= pA %>%"><% if(pA>6){%><%= pA %>%<%}%></div><% } %>
+    </div>
+    <div class="grp-legend">
+      <span class="grp-leg grp-leg-green">Conseguido (<%= totalConseguido %>)</span>
+      <span class="grp-leg grp-leg-yellow">En proceso (<%= totalE %>)</span>
+      <span class="grp-leg grp-leg-red">Necesita apoyo (<%= totalA %>)</span>
+    </div>
+  </div>
+  <% } %>
+
+  <!-- ══ TABLA DE ALUMNOS ═══════════════════════════════════════════ -->
+  <div class="grp-table-section">
+    <div class="grp-section-title"><i class="bi bi-table me-2"></i>Detalle por alumno/a</div>
+    <table class="grp-table">
+      <thead>
         <tr>
+          <th>#</th>
           <th>Alumno/a</th>
           <th class="text-center">Sesiones</th>
-          <th class="text-center text-success">Conseguido</th>
-          <th class="text-center text-warning">En proceso</th>
-          <th class="text-center text-danger">Necesita apoyo</th>
+          <th>Distribución</th>
+          <th class="text-center grp-col-green">Conseg.</th>
+          <th class="text-center grp-col-yellow">En proc.</th>
+          <th class="text-center grp-col-red">N. apoyo</th>
+          <th class="text-center">% logro</th>
           <th class="d-print-none"></th>
         </tr>
       </thead>
       <tbody>
-        <% rows.forEach(r => { %>
-        <tr>
-          <td><a href="/students/<%= r.student.id %>" class="text-decoration-none fw-semibold"><%= r.student.surname %>, <%= r.student.name %></a></td>
-          <td class="text-center"><%= r.stats?.total || 0 %></td>
-          <td class="text-center fw-semibold text-success"><%= r.stats?.conseguido || 0 %></td>
-          <td class="text-center fw-semibold text-warning"><%= r.stats?.en_proceso || 0 %></td>
-          <td class="text-center fw-semibold text-danger"><%= r.stats?.necesita_apoyo || 0 %></td>
-          <td class="d-print-none">
-            <a href="/reports/student/<%= r.student.id %>" class="btn btn-xs btn-outline-primary">Informe</a>
+        <% rows.forEach((r, idx) => {
+          const tot = r.stats?.total || 0;
+          const nC = r.stats?.conseguido || 0;
+          const nP = r.stats?.en_proceso || 0;
+          const nA = r.stats?.necesita_apoyo || 0;
+          const pC = tot ? Math.round(nC/tot*100) : 0;
+          const pP = tot ? Math.round(nP/tot*100) : 0;
+          const pA = tot ? Math.round(nA/tot*100) : 0;
+          const pLogro = tot ? pC : null;
+        %>
+        <tr class="<%= tot === 0 ? 'grp-row-inactive' : '' %>">
+          <td class="grp-idx"><%= idx+1 %></td>
+          <td class="grp-name">
+            <div class="grp-avatar"><%= r.student.name.charAt(0) %><%= r.student.surname.charAt(0) %></div>
+            <div>
+              <div class="grp-name-text"><%= r.student.surname %>, <%= r.student.name %></div>
+              <% if (r.student.course) { %><div class="grp-course-text"><%= r.student.course %></div><% } %>
+            </div>
+          </td>
+          <td class="text-center grp-cell-num"><%= tot %></td>
+          <td class="grp-bar-cell">
+            <% if (tot > 0) { %>
+            <div class="grp-mini-bar">
+              <% if(pC){ %><div class="grp-mb-green" style="width:<%= pC %>%"></div><% } %>
+              <% if(pP){ %><div class="grp-mb-yellow" style="width:<%= pP %>%"></div><% } %>
+              <% if(pA){ %><div class="grp-mb-red" style="width:<%= pA %>%"></div><% } %>
+            </div>
+            <% } else { %>
+            <span class="grp-no-data">Sin sesiones</span>
+            <% } %>
+          </td>
+          <td class="text-center grp-cell-green"><% if(nC){ %><strong><%= nC %></strong><% } else { %>–<% } %></td>
+          <td class="text-center grp-cell-yellow"><% if(nP){ %><strong><%= nP %></strong><% } else { %>–<% } %></td>
+          <td class="text-center grp-cell-red"><% if(nA){ %><strong><%= nA %></strong><% } else { %>–<% } %></td>
+          <td class="text-center">
+            <% if (pLogro !== null) { %>
+            <span class="grp-pct-badge"
+              style="background:<%= pLogro>=60?'#d1e7dd':pLogro>=30?'#fff3cd':'#f8d7da' %>;color:<%= pLogro>=60?'#198754':pLogro>=30?'#e6a817':'#dc3545' %>">
+              <%= pLogro %>%
+            </span>
+            <% } else { %><span class="grp-no-data">—</span><% } %>
+          </td>
+          <td class="d-print-none grp-actions">
+            <a href="/reports/student/<%= r.student.id %><%= filters.program_id?'?program_id='+filters.program_id:'' %>" class="btn btn-xs btn-outline-primary">
+              <i class="bi bi-person-lines-fill"></i>
+            </a>
           </td>
         </tr>
         <% }) %>
       </tbody>
+      <tfoot>
+        <tr class="grp-tfoot">
+          <td colspan="2"><strong>Total grupo</strong></td>
+          <td class="text-center"><strong><%= totalSessions %></strong></td>
+          <td></td>
+          <td class="text-center grp-cell-green"><strong><%= totalConseguido %></strong></td>
+          <td class="text-center grp-cell-yellow"><strong><%= rows.reduce((s,r)=>s+(r.stats?.en_proceso||0),0) %></strong></td>
+          <td class="text-center grp-cell-red"><strong><%= rows.reduce((s,r)=>s+(r.stats?.necesita_apoyo||0),0) %></strong></td>
+          <td class="text-center">
+            <% if (totalSessions > 0) { %>
+            <span class="grp-pct-badge" style="background:#d1e7dd;color:#198754"><%= pConsegGlobal %>%</span>
+            <% } %>
+          </td>
+          <td class="d-print-none"></td>
+        </tr>
+      </tfoot>
     </table>
   </div>
+
+  <!-- ══ GRÁFICO DE BARRAS ══════════════════════════════════════════ -->
+  <% const validRows = rows.filter(r => (r.stats?.total||0) > 0); %>
+  <% if (validRows.length > 0) { %>
+  <div class="grp-chart-section">
+    <div class="grp-section-title grp-page-break-before"><i class="bi bi-bar-chart-fill me-2"></i>Comparativa de logro por alumno/a</div>
+    <div class="grp-chart-wrap">
+      <% validRows.forEach(r => {
+        const tot = r.stats.total;
+        const pC = Math.round((r.stats.conseguido||0)/tot*100);
+        const pP = Math.round((r.stats.en_proceso||0)/tot*100);
+        const pA = Math.round((r.stats.necesita_apoyo||0)/tot*100);
+        const fullName = r.student.surname.split(' ')[0] + ', ' + r.student.name.split(' ')[0];
+      %>
+      <div class="grp-chart-row">
+        <div class="grp-chart-name" title="<%= r.student.surname %>, <%= r.student.name %>"><%= fullName %></div>
+        <div class="grp-chart-bar-wrap">
+          <div class="grp-chart-bar">
+            <% if(pC){ %><div class="grp-mb-green" style="width:<%= pC %>%"></div><% } %>
+            <% if(pP){ %><div class="grp-mb-yellow" style="width:<%= pP %>%"></div><% } %>
+            <% if(pA){ %><div class="grp-mb-red" style="width:<%= pA %>%"></div><% } %>
+          </div>
+        </div>
+        <div class="grp-chart-pct"><%= pC %>%</div>
+      </div>
+      <% }) %>
+    </div>
+  </div>
+  <% } %>
+
+  <!-- ══ NOTAS ══════════════════════════════════════════════════════ -->
+  <% if (!print) { %>
+  <div class="grp-notes-section d-print-none">
+    <div class="grp-section-title"><i class="bi bi-pencil-square me-2"></i>Observaciones del grupo</div>
+    <textarea class="form-control" rows="4" placeholder="Escribe aquí observaciones generales del grupo antes de imprimir..."></textarea>
+  </div>
+  <% } else { %>
+  <div class="grp-notes-section">
+    <div class="grp-section-title">Observaciones</div>
+    <div class="grp-rec-lines"></div>
+  </div>
+  <% } %>
+
+  <!-- ══ PIE ════════════════════════════════════════════════════════ -->
+  <div class="grp-footer">
+    <span><%= centerSettings.center_name || '' %> &bull; Curso <%= centerSettings.school_year || '' %></span>
+    <span><%= centerSettings.footer_text || '' %></span>
+  </div>
+
 </div>
 
-<% if (!print) { %>
-</div>
+<% if (!print) { %></div><% } %>
+
+<!-- ══ ESTILOS ════════════════════════════════════════════════════════ -->
+<style>
+.grp-wrap { max-width: 960px; margin: 0 auto; }
+.grp-print-wrap { max-width: 820px; margin: 0 auto; padding: 10px; }
+
+/* Header */
+.grp-header { background: #f8f9fa; border-radius: 10px; overflow: hidden; margin-bottom: 1.25rem; border: 1px solid #e9ecef; }
+.grp-header-top { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.25rem; }
+.grp-header-left { display: flex; align-items: center; gap: .75rem; }
+.grp-logo { height: 44px; object-fit: contain; }
+.grp-center-name { font-size: 1rem; font-weight: 700; }
+.grp-center-year { font-size: .78rem; color: #6c757d; }
+.grp-badge { font-size: .75rem; font-weight: 700; padding: .4rem .9rem; border-radius: 6px; text-transform: uppercase; letter-spacing: .04em; background: #198754; color: #fff; }
+.grp-group-bar { background: #fff; display: flex; align-items: center; gap: 1rem; padding: .9rem 1.25rem; border-top: 1px solid #e9ecef; }
+.grp-group-icon { width: 42px; height: 42px; border-radius: 50%; background: #198754; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; }
+.grp-group-name { font-size: 1rem; font-weight: 600; }
+.grp-group-meta { font-size: .78rem; color: #6c757d; margin-top: .1rem; }
+.grp-gen-date { margin-left: auto; text-align: right; font-size: .75rem; color: #6c757d; }
+
+/* Summary row */
+.grp-summary-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: .75rem; margin-bottom: .75rem; }
+.grp-sum-card { background: #f8f9fa; border-radius: 8px; padding: .8rem; text-align: center; border: 1px solid #e9ecef; }
+.grp-sum-card.grp-sum-green { background: #d1e7dd; border-color: #a3cfbb; }
+.grp-sum-card.grp-sum-blue { background: #cfe2ff; border-color: #9ec5fe; }
+.grp-sum-num { font-size: 2rem; font-weight: 800; line-height: 1; }
+.grp-sum-pct { font-size: .7rem; color: #6c757d; }
+.grp-sum-lbl { font-size: .72rem; color: #495057; font-weight: 600; margin-top: .15rem; }
+
+/* Global bar */
+.grp-global-bar-wrap { margin-bottom: 1.25rem; background: #fff; border: 1px solid #e9ecef; border-radius: 8px; padding: .85rem 1.1rem; }
+.grp-global-bar-label { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #6c757d; margin-bottom: .5rem; }
+.grp-global-bar { display: flex; height: 26px; border-radius: 5px; overflow: hidden; background: #e9ecef; }
+.grp-gb-seg { display: flex; align-items: center; justify-content: center; font-size: .68rem; font-weight: 700; color: #fff; min-width: 0; }
+.grp-gb-green  { background: #198754; }
+.grp-gb-yellow { background: #e6a817; }
+.grp-gb-red    { background: #dc3545; }
+.grp-legend { display: flex; gap: 1.2rem; margin-top: .4rem; font-size: .72rem; }
+.grp-leg::before { content: '●'; margin-right: .3rem; }
+.grp-leg-green  { color: #198754; }
+.grp-leg-yellow { color: #e6a817; }
+.grp-leg-red    { color: #dc3545; }
+
+/* Table */
+.grp-table-section { background: #fff; border: 1px solid #e9ecef; border-radius: 8px; padding: 1rem 1.1rem; margin-bottom: 1.25rem; }
+.grp-section-title { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #6c757d; margin-bottom: .85rem; padding-bottom: .4rem; border-bottom: 2px solid #f0f0f0; }
+.grp-table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+.grp-table th { background: #f3f4f6; padding: .45rem .55rem; font-weight: 700; font-size: .7rem; text-transform: uppercase; letter-spacing: .04em; color: #6c757d; border-bottom: 2px solid #e9ecef; text-align: left; }
+.grp-table td { padding: .45rem .55rem; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+.grp-table tr:last-child td { border-bottom: none; }
+.grp-table tr:hover:not(.grp-tfoot) td { background: #fafbfc; }
+.grp-tfoot td { background: #f3f4f6; font-size: .82rem; }
+.grp-row-inactive td { opacity: .5; }
+.grp-idx { color: #adb5bd; font-size: .75rem; width: 28px; }
+.grp-name { display: flex; align-items: center; gap: .6rem; }
+.grp-avatar { width: 30px; height: 30px; border-radius: 50%; background: #0d6efd20; color: #0d6efd; font-size: .7rem; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.grp-name-text { font-weight: 600; }
+.grp-course-text { font-size: .7rem; color: #6c757d; }
+.grp-cell-num { font-weight: 600; color: #495057; }
+.grp-col-green, .grp-cell-green { color: #198754; }
+.grp-col-yellow, .grp-cell-yellow { color: #e6a817; }
+.grp-col-red, .grp-cell-red { color: #dc3545; }
+.grp-bar-cell { min-width: 120px; }
+.grp-mini-bar { display: flex; height: 12px; border-radius: 3px; overflow: hidden; background: #e9ecef; }
+.grp-mb-green  { background: #198754; min-width: 0; }
+.grp-mb-yellow { background: #e6a817; min-width: 0; }
+.grp-mb-red    { background: #dc3545; min-width: 0; }
+.grp-no-data { font-size: .72rem; color: #ced4da; }
+.grp-pct-badge { font-size: .75rem; padding: .2rem .5rem; border-radius: 4px; font-weight: 700; }
+.grp-actions { width: 40px; text-align: center; }
+
+/* Chart section */
+.grp-chart-section { background: #fff; border: 1px solid #e9ecef; border-radius: 8px; padding: 1rem 1.1rem; margin-bottom: 1.25rem; }
+.grp-chart-wrap { display: flex; flex-direction: column; gap: .4rem; }
+.grp-chart-row { display: flex; align-items: center; gap: .75rem; }
+.grp-chart-name { font-size: .75rem; width: 130px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #495057; }
+.grp-chart-bar-wrap { flex: 1; }
+.grp-chart-bar { display: flex; height: 16px; border-radius: 3px; overflow: hidden; background: #e9ecef; }
+.grp-chart-pct { font-size: .72rem; font-weight: 700; color: #198754; width: 34px; text-align: right; }
+.grp-page-break-before { margin-top: .5rem; }
+
+/* Notes */
+.grp-notes-section { background: #fff; border: 1px solid #e9ecef; border-radius: 8px; padding: 1rem 1.1rem; margin-bottom: 1.25rem; }
+.grp-rec-lines { height: 70px; background-image: repeating-linear-gradient(transparent, transparent 23px, #e9ecef 23px, #e9ecef 24px); }
+
+/* Footer */
+.grp-footer { display: flex; justify-content: space-between; font-size: .72rem; color: #6c757d; padding-top: .75rem; border-top: 1px solid #e9ecef; margin-top: .75rem; }
+
+/* ══ PRINT ═══════════════════════════════════════════════════════ */
+@media print {
+  @page { margin: 1.2cm; size: A4 landscape; }
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
+  html { zoom: 0.65; }
+  body { font-size: 8.5pt; }
+  .sidebar, nav, .btn, .d-print-none, textarea, form { display: none !important; }
+  .grp-print-wrap { max-width: 100%; padding: 0; }
+
+  .grp-header { border-radius: 0; margin-bottom: .8rem; }
+  .grp-summary-row { gap: .4rem; }
+  .grp-sum-num { font-size: 1.5rem; }
+  .grp-global-bar { height: 18px; }
+  .grp-table th, .grp-table td { padding: .3rem .4rem; font-size: 7.5pt; }
+  .grp-mini-bar { height: 9px; }
+  .grp-table-section, .grp-chart-section, .grp-notes-section, .grp-global-bar-wrap { border: 1px solid #ccc; border-radius: 3px; padding: .6rem .8rem; margin-bottom: .8rem; }
+  .grp-page-break-before { page-break-before: always; }
+  .grp-avatar { display: none; }
+  .grp-chart-section { page-break-inside: avoid; }
+  .grp-footer { font-size: 7pt; padding-top: .4rem; }
+}
+</style>
+
+<% if (print) { %>
+<script>window.onload = () => window.print();</script>
 <% } %>
 
 <% if (!print) { %><%- include('../partials/footer') %><% } %>

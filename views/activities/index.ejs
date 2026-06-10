@@ -6,11 +6,9 @@
 
   <div class="d-flex align-items-center justify-content-between mb-4">
     <h1 class="h3 fw-bold mb-0"><i class="bi bi-list-task me-2 text-info"></i>Actividades</h1>
-    <% if (currentUser.role === 'admin') { %>
     <a href="/activities/new" class="btn btn-primary">
       <i class="bi bi-plus-circle me-1"></i>Nueva actividad
     </a>
-    <% } %>
   </div>
 
   <!-- Filters -->
@@ -42,8 +40,16 @@
             <% }) %>
           </select>
         </div>
-        <div class="col-12 col-md-2 d-flex gap-2">
-          <button type="submit" class="btn btn-primary btn-sm flex-grow-1"><i class="bi bi-search me-1"></i>Filtrar</button>
+        <div class="col-6 col-md-2">
+          <select name="tag_id" class="form-select">
+            <option value="">Todas las etiquetas</option>
+            <% allTags.forEach(t => { %>
+              <option value="<%= t.id %>" <%= filters.tag_id == t.id ? 'selected' : '' %>><%= t.name %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="col-6 col-md-1 d-flex gap-2">
+          <button type="submit" class="btn btn-primary btn-sm flex-grow-1"><i class="bi bi-search"></i></button>
           <a href="/activities" class="btn btn-outline-secondary btn-sm">×</a>
         </div>
       </form>
@@ -51,7 +57,7 @@
   </div>
 
   <!-- Active filters summary -->
-  <% if (filters.program_id || filters.level || filters.q) { %>
+  <% if (filters.program_id || filters.level || filters.q || filters.tag_id) { %>
   <div class="d-flex flex-wrap gap-2 mb-3 align-items-center">
     <span class="text-muted small">Filtrando por:</span>
     <% if (filters.q) { %>
@@ -74,6 +80,15 @@
         <i class="bi bi-mortarboard me-1"></i><%= filters.level %>
         <a href="/activities?<%= filters.q ? 'q=' + encodeURIComponent(filters.q) + '&' : '' %><%= filters.program_id ? 'program_id=' + filters.program_id : '' %>" class="text-info ms-1">×</a>
       </span>
+    <% } %>
+    <% if (filters.tag_id) { %>
+      <% const ft = allTags.find(t => t.id == filters.tag_id); %>
+      <% if (ft) { %>
+      <span class="badge" style="background:<%= ft.color %>20;color:<%= ft.color %>;border:1px solid <%= ft.color %>50">
+        <i class="bi bi-tag me-1"></i><%= ft.name %>
+        <a href="/activities?<%= filters.q ? 'q=' + encodeURIComponent(filters.q) + '&' : '' %><%= filters.program_id ? 'program_id=' + filters.program_id + '&' : '' %><%= filters.level ? 'level=' + encodeURIComponent(filters.level) : '' %>" style="color:inherit" class="ms-1">×</a>
+      </span>
+      <% } %>
     <% } %>
     <span class="text-muted small ms-1"><%= activities.length %> resultado<%= activities.length !== 1 ? 's' : '' %></span>
   </div>
@@ -133,14 +148,22 @@
             <% } else { %>
               <span class="badge bg-light text-muted" style="font-size:.65rem">Todos los niveles</span>
             <% } %>
+            <% if (a.tag_names) { %>
+              <div class="d-flex flex-wrap gap-1 mt-2">
+                <% const tNames = a.tag_names.split('|||'); const tColors = a.tag_colors.split('|||'); %>
+                <% tNames.forEach((tName, ti) => { const tc = tColors[ti] || '#6c757d'; %>
+                  <span class="badge" style="background:<%= tc %>20;color:<%= tc %>;border:1px solid <%= tc %>40;font-size:.65rem">
+                    <i class="bi bi-tag me-1"></i><%= tName %>
+                  </span>
+                <% }) %>
+              </div>
+            <% } %>
           </div>
-          <% if (currentUser.role === 'admin') { %>
           <div class="card-footer bg-transparent border-0 pt-0 pb-2">
             <a href="/activities/<%= a.id %>/edit" class="btn btn-xs btn-outline-secondary">
               <i class="bi bi-pencil me-1"></i>Editar
             </a>
           </div>
-          <% } %>
         </div>
       </div>
       <% }) %>

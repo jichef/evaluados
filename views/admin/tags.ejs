@@ -1,0 +1,131 @@
+<%- include('../partials/header') %>
+<%- include('../partials/nav') %>
+
+<div class="page-content">
+  <%- include('../partials/flash') %>
+
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <a href="/admin" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+    <h1 class="h4 fw-bold mb-0"><i class="bi bi-tags me-2 text-warning"></i>Etiquetas</h1>
+  </div>
+
+  <div class="row g-4">
+    <!-- Create form -->
+    <div class="col-12 col-md-4">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent fw-semibold">Nueva etiqueta</div>
+        <div class="card-body">
+          <form method="POST" action="/admin/tags">
+            <div class="mb-3">
+              <label class="form-label">Nombre <span class="text-danger">*</span></label>
+              <input type="text" name="name" class="form-control" placeholder="Ej: Lectura, Matemáticas..." required maxlength="40">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Color</label>
+              <div class="d-flex flex-wrap gap-2" id="colorPicker">
+                <% const PALETTE = [
+                  { hex: '#0d6efd', label: 'Azul' },
+                  { hex: '#198754', label: 'Verde' },
+                  { hex: '#dc3545', label: 'Rojo' },
+                  { hex: '#ffc107', label: 'Amarillo' },
+                  { hex: '#0dcaf0', label: 'Cian' },
+                  { hex: '#6f42c1', label: 'Morado' },
+                  { hex: '#fd7e14', label: 'Naranja' },
+                  { hex: '#20c997', label: 'Verde azulado' },
+                  { hex: '#d63384', label: 'Rosa' },
+                  { hex: '#6c757d', label: 'Gris' },
+                ]; %>
+                <% PALETTE.forEach((c, i) => { %>
+                <label class="color-swatch" title="<%= c.label %>" style="background:<%= c.hex %>;width:28px;height:28px;border-radius:50%;cursor:pointer;display:block;border:3px solid transparent">
+                  <input type="radio" name="color" value="<%= c.hex %>" class="visually-hidden" <%= i === 0 ? 'checked' : '' %>>
+                </label>
+                <% }) %>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary w-100"><i class="bi bi-plus-circle me-1"></i>Crear etiqueta</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tag list -->
+    <div class="col-12 col-md-8">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent fw-semibold">
+          Etiquetas existentes
+          <span class="badge bg-secondary-subtle text-secondary ms-1"><%= tags.filter(t=>t.active).length %> activas</span>
+        </div>
+        <% if (tags.length === 0) { %>
+        <div class="card-body text-center text-muted py-5">
+          <i class="bi bi-tags fs-2 opacity-50 d-block mb-2"></i>
+          Aún no hay etiquetas. Crea la primera.
+        </div>
+        <% } else { %>
+        <ul class="list-group list-group-flush">
+          <% tags.forEach(tag => { %>
+          <li class="list-group-item">
+            <div class="d-flex align-items-center gap-3">
+              <span class="badge px-2 py-1" style="background:<%= tag.color %>25;color:<%= tag.color %>;border:1px solid <%= tag.color %>50;font-size:.8rem">
+                <i class="bi bi-tag me-1"></i><%= tag.name %>
+              </span>
+              <span class="text-muted small"><%= tag.usage_count %> actividad<%= tag.usage_count !== 1 ? 'es' : '' %></span>
+              <% if (!tag.active) { %><span class="badge bg-secondary-subtle text-secondary">Inactiva</span><% } %>
+              <div class="ms-auto d-flex gap-2">
+                <button class="btn btn-xs btn-outline-secondary" data-bs-toggle="collapse"
+                  data-bs-target="#editTag<%= tag.id %>">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <form method="POST" action="/admin/tags/<%= tag.id %>/delete"
+                  onsubmit="return confirm('¿Eliminar la etiqueta «<%= tag.name %>»? Se quitará de todas las actividades.')">
+                  <button type="submit" class="btn btn-xs btn-outline-danger"><i class="bi bi-trash"></i></button>
+                </form>
+              </div>
+            </div>
+            <div class="collapse mt-2" id="editTag<%= tag.id %>">
+              <form method="POST" action="/admin/tags/<%= tag.id %>" class="d-flex gap-2 align-items-end flex-wrap">
+                <div>
+                  <label class="form-label small mb-1">Nombre</label>
+                  <input type="text" name="name" class="form-control form-control-sm" value="<%= tag.name %>" required maxlength="40" style="width:160px">
+                </div>
+                <div>
+                  <label class="form-label small mb-1">Color</label>
+                  <input type="color" name="color" class="form-control form-control-sm form-control-color" value="<%= tag.color %>" style="width:50px;height:31px">
+                </div>
+                <div class="form-check mb-0 ms-1">
+                  <input class="form-check-input" type="checkbox" name="active" id="active<%= tag.id %>" <%= tag.active ? 'checked' : '' %>>
+                  <label class="form-check-label small" for="active<%= tag.id %>">Activa</label>
+                </div>
+                <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-check-lg"></i> Guardar</button>
+              </form>
+            </div>
+          </li>
+          <% }) %>
+        </ul>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.color-swatch input:checked + .color-swatch,
+.color-swatch:has(input:checked) { border-color: #fff !important; outline: 2px solid #333; outline-offset: 1px; }
+</style>
+<script>
+document.querySelectorAll('.color-swatch').forEach(sw => {
+  sw.addEventListener('click', () => {
+    document.querySelectorAll('.color-swatch').forEach(s => s.style.outline = '');
+    sw.style.outline = '2px solid #333';
+    sw.style.outlineOffset = '2px';
+  });
+});
+// Set initial outline on checked swatch
+const checked = document.querySelector('.color-swatch input:checked');
+if (checked) {
+  const sw = checked.closest('.color-swatch');
+  sw.style.outline = '2px solid #333';
+  sw.style.outlineOffset = '2px';
+}
+</script>
+
+<%- include('../partials/footer') %>

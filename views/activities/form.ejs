@@ -76,23 +76,86 @@
             <textarea name="description" class="form-control" rows="3"><%= activity?.description || '' %></textarea>
           </div>
 
-          <!-- Objectives -->
-          <% if (objectives.length > 0) { %>
+          <!-- Tags -->
           <div class="col-12">
-            <label class="form-label fw-semibold">Objetivos asociados</label>
-            <div class="border rounded p-3 bg-light" style="max-height: 200px; overflow-y: auto">
-              <% objectives.forEach(o => { %>
-              <div class="form-check">
-                <input class="form-check-input" type="checkbox" name="objectives[]"
-                  value="<%= o.id %>" id="obj_<%= o.id %>"
-                  <%= selectedObjectives.includes(o.id) ? 'checked' : '' %>>
-                <label class="form-check-label small" for="obj_<%= o.id %>">
-                  <%= o.description %>
-                  <% if (o.area) { %><span class="badge bg-secondary ms-1"><%= o.area %></span><% } %>
-                </label>
-              </div>
-              <% }) %>
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <label class="form-label fw-semibold mb-0">Etiquetas</label>
+              <button type="button" class="btn btn-xs btn-outline-secondary" id="newTagToggle" title="Nueva etiqueta">
+                <i class="bi bi-plus-lg"></i> Nueva
+              </button>
             </div>
+
+            <!-- Inline new-tag form -->
+            <div id="newTagForm" class="d-none mb-2 p-2 border rounded bg-light">
+              <div class="d-flex gap-2 align-items-center flex-wrap">
+                <input type="text" id="newTagName" class="form-control form-control-sm" placeholder="Nombre de etiqueta" maxlength="40" style="width:180px">
+                <div class="d-flex gap-1" id="newTagColorPicker">
+                  <% const TAG_PALETTE = ['#0d6efd','#198754','#dc3545','#ffc107','#0dcaf0','#6f42c1','#fd7e14','#20c997','#d63384','#6c757d']; %>
+                  <% TAG_PALETTE.forEach((c, i) => { %>
+                  <span class="tag-color-opt" data-color="<%= c %>"
+                    style="background:<%= c %>;width:22px;height:22px;border-radius:50%;cursor:pointer;display:inline-block;border:2px solid transparent;<%= i===0?'outline:2px solid #333;outline-offset:2px':'' %>"
+                    title="<%= c %>"></span>
+                  <% }) %>
+                </div>
+                <button type="button" class="btn btn-sm btn-primary" id="newTagSave"><i class="bi bi-check-lg"></i> Añadir</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="newTagCancel">Cancelar</button>
+                <span id="newTagError" class="text-danger small d-none"></span>
+              </div>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2" id="tagPicker">
+              <% if (tags && tags.length > 0) { %>
+              <% tags.forEach(tag => { %>
+              <label class="tag-pill-label" for="tag_<%= tag.id %>">
+                <input type="checkbox" name="tags[]" value="<%= tag.id %>" id="tag_<%= tag.id %>"
+                  class="visually-hidden tag-check" <%= selectedTags.includes(tag.id) ? 'checked' : '' %>>
+                <span class="badge tag-pill-badge px-2 py-1"
+                  style="--tag-color:<%= tag.color %>; background:var(--tag-color)25; color:var(--tag-color); border:1px solid var(--tag-color)50; cursor:pointer; font-size:.8rem; font-weight:500; user-select:none; transition: all .15s">
+                  <i class="bi bi-tag me-1"></i><%= tag.name %>
+                </span>
+              </label>
+              <% }) %>
+              <% } %>
+            </div>
+            <% if (!tags || tags.length === 0) { %>
+            <div class="text-muted small mt-1" id="noTagsMsg"><i class="bi bi-info-circle me-1"></i>Pulsa "+ Nueva" para crear tu primera etiqueta.</div>
+            <% } %>
+          </div>
+
+          <!-- Saberes -->
+          <% if (saberes && saberes.length > 0) { %>
+          <div class="col-12">
+            <label class="form-label fw-semibold">
+              Saberes básicos
+              <span id="saberCountBadge" class="badge bg-secondary-subtle text-secondary ms-1">0</span>
+            </label>
+            <div class="border rounded overflow-hidden shadow-sm">
+              <!-- Search bar -->
+              <div class="p-2 bg-white border-bottom">
+                <div class="input-group input-group-sm">
+                  <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                  <input type="text" id="saberSearch" class="form-control border-start-0 ps-0"
+                    placeholder="Buscar por código, descripción o área...">
+                  <button type="button" class="btn btn-outline-secondary" id="saberClearBtn">
+                    <i class="bi bi-x-lg"></i>
+                  </button>
+                </div>
+              </div>
+              <!-- Area filter pills -->
+              <div class="px-2 py-2 border-bottom bg-light d-flex flex-wrap gap-1" id="saberAreaPills">
+                <button type="button" class="btn btn-sm btn-secondary saber-area-pill active" data-area="">Todas</button>
+              </div>
+              <!-- Scrollable list -->
+              <div id="saberPickerList" style="max-height:300px;overflow-y:auto;background:#fff"></div>
+              <!-- Selected chips -->
+              <div id="saberSelectedBar" class="p-2 border-top d-none" style="background:#f5f3ff">
+                <div class="small fw-semibold text-secondary mb-1">
+                  <i class="bi bi-check2-all me-1"></i>Seleccionados:
+                </div>
+                <div id="saberSelectedChips" class="d-flex flex-wrap gap-1"></div>
+              </div>
+            </div>
+            <div id="saberHiddenInputs"></div>
           </div>
           <% } %>
 
@@ -154,7 +217,7 @@
             <i class="bi bi-check-lg me-1"></i><%= activity ? 'Actualizar' : 'Crear actividad' %>
           </button>
           <a href="/activities" class="btn btn-outline-secondary">Cancelar</a>
-          <% if (activity) { %>
+          <% if (activity && currentUser.role === 'admin') { %>
           <form method="POST" action="/activities/<%= activity.id %>/delete" class="ms-auto" onsubmit="return confirm('¿Desactivar esta actividad?')">
             <button type="submit" class="btn btn-outline-danger">
               <i class="bi bi-archive me-1"></i>Desactivar
@@ -166,6 +229,196 @@
     </div>
   </div>
 </div>
+
+<style>
+.tag-pill-label { cursor: pointer; }
+.tag-check:checked ~ .tag-pill-badge {
+  background: var(--tag-color, #0d6efd) !important;
+  color: #fff !important;
+  border-color: var(--tag-color, #0d6efd) !important;
+}
+</style>
+<script>
+(function() {
+  let selectedColor = '<%- (typeof TAG_PALETTE !== "undefined" ? TAG_PALETTE[0] : "#0d6efd") %>';
+  // pick first palette color
+  const firstOpt = document.querySelector('.tag-color-opt');
+  if (firstOpt) selectedColor = firstOpt.dataset.color;
+
+  document.querySelectorAll('.tag-color-opt').forEach(opt => {
+    opt.addEventListener('click', () => {
+      document.querySelectorAll('.tag-color-opt').forEach(o => { o.style.outline = ''; o.style.outlineOffset = ''; });
+      opt.style.outline = '2px solid #333';
+      opt.style.outlineOffset = '2px';
+      selectedColor = opt.dataset.color;
+    });
+  });
+
+  document.getElementById('newTagToggle').addEventListener('click', () => {
+    document.getElementById('newTagForm').classList.toggle('d-none');
+    document.getElementById('newTagName').focus();
+  });
+  document.getElementById('newTagCancel').addEventListener('click', () => {
+    document.getElementById('newTagForm').classList.add('d-none');
+    document.getElementById('newTagName').value = '';
+    document.getElementById('newTagError').classList.add('d-none');
+  });
+
+  document.getElementById('newTagSave').addEventListener('click', async () => {
+    const name = document.getElementById('newTagName').value.trim();
+    const errEl = document.getElementById('newTagError');
+    if (!name) { errEl.textContent = 'Escribe un nombre.'; errEl.classList.remove('d-none'); return; }
+
+    try {
+      const res = await fetch('/api/tags', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, color: selectedColor })
+      });
+      const data = await res.json();
+      if (!res.ok) { errEl.textContent = data.error || 'Error al crear.'; errEl.classList.remove('d-none'); return; }
+
+      // Add new pill to picker
+      const picker = document.getElementById('tagPicker');
+      const noMsg = document.getElementById('noTagsMsg');
+      if (noMsg) noMsg.remove();
+
+      const lbl = document.createElement('label');
+      lbl.className = 'tag-pill-label';
+      lbl.htmlFor = 'tag_' + data.id;
+      lbl.innerHTML = `
+        <input type="checkbox" name="tags[]" value="${data.id}" id="tag_${data.id}" class="visually-hidden tag-check" checked>
+        <span class="badge tag-pill-badge px-2 py-1"
+          style="--tag-color:${data.color}; background:${data.color}; color:#fff; border:1px solid ${data.color}; cursor:pointer; font-size:.8rem; font-weight:500; user-select:none; transition: all .15s">
+          <i class="bi bi-tag me-1"></i>${data.name}
+        </span>`;
+      picker.appendChild(lbl);
+
+      // reset form
+      document.getElementById('newTagName').value = '';
+      errEl.classList.add('d-none');
+      document.getElementById('newTagForm').classList.add('d-none');
+    } catch (e) {
+      errEl.textContent = 'Error de conexión.';
+      errEl.classList.remove('d-none');
+    }
+  });
+
+  // Allow Enter key in name input
+  document.getElementById('newTagName').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); document.getElementById('newTagSave').click(); }
+  });
+})();
+</script>
+
+<% if (saberes && saberes.length > 0) { %>
+<style>
+.saber-row { cursor:pointer; user-select:none; transition:background .1s; }
+.saber-row:hover { background:#f8f9fa; }
+.saber-row.sel { background:#f5f3ff; }
+.saber-row.sel:hover { background:#ede9fe; }
+.saber-group-hdr { position:sticky; top:0; z-index:1; font-size:.67rem; letter-spacing:.05em; text-transform:uppercase; background:#f3f4f6; }
+</style>
+<script>
+const SABER_DATA = <%- JSON.stringify(saberes.map(s => ({ id:s.id, code:s.code||'', description:s.description, area:s.area||'', bloque:s.bloque||'' }))) %>;
+const saberSelectedIds = new Set(<%- JSON.stringify(selectedSaberes) %>);
+
+// Build area pills
+const SABER_AREAS = [...new Set(SABER_DATA.map(s => s.area).filter(Boolean))].sort();
+const saberPillBox = document.getElementById('saberAreaPills');
+SABER_AREAS.forEach(area => {
+  const b = document.createElement('button');
+  b.type='button'; b.className='btn btn-sm btn-outline-secondary saber-area-pill';
+  b.dataset.area=area; b.textContent=area;
+  saberPillBox.appendChild(b);
+});
+saberPillBox.addEventListener('click', e => {
+  const p = e.target.closest('.saber-area-pill'); if(!p) return;
+  saberPillBox.querySelectorAll('.saber-area-pill').forEach(x => { x.classList.remove('active','btn-secondary'); x.classList.add('btn-outline-secondary'); });
+  p.classList.add('active','btn-secondary'); p.classList.remove('btn-outline-secondary');
+  renderSaberList();
+});
+
+const saberSearchEl = document.getElementById('saberSearch');
+saberSearchEl.addEventListener('input', renderSaberList);
+document.getElementById('saberClearBtn').addEventListener('click', () => { saberSearchEl.value=''; renderSaberList(); saberSearchEl.focus(); });
+
+function escS(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function saberRowHtml(s) {
+  const on = saberSelectedIds.has(s.id);
+  return `<div class="saber-row d-flex align-items-start gap-2 px-3 py-2 border-bottom${on?' sel':''}" data-sid="${s.id}">
+    <div class="flex-shrink-0 mt-1"><i class="bi ${on?'bi-check-square-fill text-secondary':'bi-square text-muted'}"></i></div>
+    <div class="small lh-sm flex-grow-1">
+      ${s.code?`<strong class="me-1">${escS(s.code)}:</strong>`:''}${escS(s.description)}
+      ${s.bloque?`<span class="badge bg-secondary-subtle text-secondary ms-1" style="font-size:.62rem">${escS(s.bloque)}</span>`:''}
+    </div>
+  </div>`;
+}
+
+function renderSaberList() {
+  const q = saberSearchEl.value.toLowerCase().trim();
+  const area = document.querySelector('.saber-area-pill.active')?.dataset.area || '';
+  const box = document.getElementById('saberPickerList');
+  const filtered = SABER_DATA.filter(s =>
+    (!area || s.area===area) &&
+    (!q || (s.code+' '+s.description+' '+s.area+' '+s.bloque).toLowerCase().includes(q))
+  );
+  if (!filtered.length) {
+    box.innerHTML = '<div class="text-center text-muted py-4 small"><i class="bi bi-search me-1"></i>Sin resultados</div>';
+    return;
+  }
+  if (!area && !q) {
+    const grps = new Map();
+    filtered.forEach(s => { const k=s.bloque||s.area||'Sin bloque'; if(!grps.has(k)) grps.set(k,[]); grps.get(k).push(s); });
+    box.innerHTML = [...grps.entries()].map(([g,items]) =>
+      `<div class="saber-group-hdr px-3 py-1 border-bottom text-muted fw-semibold">${escS(g)} <span class="fw-normal opacity-75">(${items.length})</span></div>`+items.map(saberRowHtml).join('')
+    ).join('');
+  } else {
+    box.innerHTML = filtered.map(saberRowHtml).join('');
+  }
+  box.querySelectorAll('.saber-row').forEach(row => {
+    row.addEventListener('click', () => {
+      const id = parseInt(row.dataset.sid);
+      const adding = !saberSelectedIds.has(id);
+      saberSelectedIds.has(id) ? saberSelectedIds.delete(id) : saberSelectedIds.add(id);
+      renderSaberList(); updateSaberChips(); syncSaberHidden();
+      if (adding && typeof autoSelectCriteriaForSaber === 'function') autoSelectCriteriaForSaber(id);
+    });
+  });
+}
+
+function updateSaberChips() {
+  const count = saberSelectedIds.size;
+  const badge = document.getElementById('saberCountBadge');
+  badge.textContent = count ? `${count} seleccionado${count!==1?'s':''}` : '0';
+  badge.className = count ? 'badge bg-secondary ms-1' : 'badge bg-secondary-subtle text-secondary ms-1';
+  const bar = document.getElementById('saberSelectedBar');
+  const chips = document.getElementById('saberSelectedChips');
+  if (!count) { bar.classList.add('d-none'); chips.innerHTML=''; return; }
+  bar.classList.remove('d-none');
+  chips.innerHTML = SABER_DATA.filter(s => saberSelectedIds.has(s.id)).map(s =>
+    `<span class="badge bg-white text-secondary border border-secondary d-inline-flex align-items-center gap-1 py-1 px-2" style="font-size:.75rem;max-width:220px">
+      <span class="text-truncate">${s.code ? escS(s.code) : escS(s.description.substring(0,30)+'…')}</span>
+      <button type="button" class="btn-close ms-1" style="font-size:.45rem" data-xsid="${s.id}" aria-label="Quitar"></button>
+    </span>`).join('');
+  chips.querySelectorAll('[data-xsid]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      saberSelectedIds.delete(parseInt(btn.dataset.xsid));
+      renderSaberList(); updateSaberChips(); syncSaberHidden();
+    });
+  });
+}
+
+function syncSaberHidden() {
+  document.getElementById('saberHiddenInputs').innerHTML =
+    [...saberSelectedIds].map(id => `<input type="hidden" name="saberes[]" value="${id}">`).join('');
+}
+
+renderSaberList(); updateSaberChips(); syncSaberHidden();
+</script>
+<% } %>
 
 <% if (criteria.length > 0) { %>
 <style>
@@ -243,8 +496,10 @@ function renderList() {
   box.querySelectorAll('.crit-row').forEach(row => {
     row.addEventListener('click', () => {
       const id = parseInt(row.dataset.cid);
+      const adding = !selectedIds.has(id);
       selectedIds.has(id) ? selectedIds.delete(id) : selectedIds.add(id);
       renderList(); updateChips(); syncHidden();
+      if (adding && typeof autoSelectSaberesForCriteria === 'function') autoSelectSaberesForCriteria(id);
     });
   });
 }
@@ -281,6 +536,41 @@ function syncHidden() {
 }
 
 renderList(); updateChips(); syncHidden();
+</script>
+<% } %>
+
+<% if ((saberes && saberes.length > 0) && criteria.length > 0 && saberCriteriaLinks && saberCriteriaLinks.length > 0) { %>
+<script>
+(function() {
+  const LINKS = <%- JSON.stringify(saberCriteriaLinks) %>;
+
+  // saber_id → [criterion_id, ...]
+  const SABER_TO_CRIT = {};
+  // criterion_id → [saber_id, ...]
+  const CRIT_TO_SABER = {};
+  LINKS.forEach(({ saber_id, criterion_id }) => {
+    if (!SABER_TO_CRIT[saber_id]) SABER_TO_CRIT[saber_id] = [];
+    SABER_TO_CRIT[saber_id].push(criterion_id);
+    if (!CRIT_TO_SABER[criterion_id]) CRIT_TO_SABER[criterion_id] = [];
+    CRIT_TO_SABER[criterion_id].push(saber_id);
+  });
+
+  window.autoSelectCriteriaForSaber = function(saberId) {
+    const linked = SABER_TO_CRIT[saberId] || [];
+    if (!linked.length) return;
+    let changed = false;
+    linked.forEach(cid => { if (!selectedIds.has(cid)) { selectedIds.add(cid); changed = true; } });
+    if (changed) { renderList(); updateChips(); syncHidden(); }
+  };
+
+  window.autoSelectSaberesForCriteria = function(critId) {
+    const linked = CRIT_TO_SABER[critId] || [];
+    if (!linked.length) return;
+    let changed = false;
+    linked.forEach(sid => { if (!saberSelectedIds.has(sid)) { saberSelectedIds.add(sid); changed = true; } });
+    if (changed) { renderSaberList(); updateSaberChips(); syncSaberHidden(); }
+  };
+})();
 </script>
 <% } %>
 
