@@ -1,0 +1,118 @@
+<%- include('../partials/header') %>
+<%- include('../partials/nav') %>
+
+<div class="page-content">
+  <%- include('../partials/flash') %>
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <h1 class="h3 fw-bold mb-0"><i class="bi bi-calendar2-week me-2"></i>Programaciones anuales</h1>
+    <button type="button" class="btn btn-primary ms-auto" data-bs-toggle="modal" data-bs-target="#newModal">
+      <i class="bi bi-plus-lg me-1"></i>Nueva programación
+    </button>
+  </div>
+
+  <% if (!programmings.length) { %>
+  <div class="text-center text-muted py-5">
+    <i class="bi bi-calendar2-week fs-1 d-block mb-3 opacity-25"></i>
+    <p class="mb-1 fw-semibold">Aún no tienes programaciones</p>
+    <p class="small mb-3">Crea una programación para secuenciar las actividades de un programa.<br>El wizard de sesión mostrará la siguiente actividad pendiente automáticamente.</p>
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newModal">
+      <i class="bi bi-plus-lg me-1"></i>Crear primera programación
+    </button>
+  </div>
+  <% } else { %>
+
+  <%
+    // Group by program
+    const byProgram = {};
+    programmings.forEach(pg => {
+      if (!byProgram[pg.program_name]) byProgram[pg.program_name] = { color: pg.color, icon: pg.icon, items: [] };
+      byProgram[pg.program_name].items.push(pg);
+    });
+  %>
+
+  <% Object.entries(byProgram).forEach(([progName, group]) => { %>
+  <div class="mb-4">
+    <div class="d-flex align-items-center gap-2 mb-3">
+      <span class="program-icon-sm" style="background:<%=group.color%>20;color:<%=group.color%>">
+        <i class="bi bi-<%= group.icon %>"></i>
+      </span>
+      <h2 class="h5 fw-semibold mb-0"><%= progName %></h2>
+    </div>
+    <div class="row g-3">
+      <% group.items.forEach(pg => { %>
+      <div class="col-md-6 col-lg-4">
+        <a href="/programmings/<%= pg.id %>" class="card border-0 shadow-sm text-decoration-none text-reset h-100">
+          <div class="card-body">
+            <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
+              <div class="fw-semibold"><%= pg.name %></div>
+              <% if (!pg.active) { %>
+              <span class="badge bg-secondary">Inactiva</span>
+              <% } %>
+            </div>
+            <% if (pg.description) { %>
+            <p class="text-muted small mb-2"><%= pg.description %></p>
+            <% } %>
+            <div class="d-flex gap-2 flex-wrap">
+              <span class="badge bg-light text-dark border">
+                <i class="bi bi-list-ol me-1"></i><%= pg.activity_count %> actividad<%= pg.activity_count !== 1 ? 'es' : '' %>
+              </span>
+              <% if (pg.course) { %>
+              <span class="badge bg-info-subtle text-info border"><i class="bi bi-mortarboard me-1"></i><%= pg.course %></span>
+              <% } %>
+            </div>
+          </div>
+          <div class="card-footer bg-transparent border-0 pt-0 pb-2">
+            <span class="text-primary small"><i class="bi bi-pencil me-1"></i>Editar secuencia</span>
+          </div>
+        </a>
+      </div>
+      <% }) %>
+    </div>
+  </div>
+  <% }) %>
+  <% } %>
+</div>
+
+<!-- New programming modal -->
+<div class="modal fade" id="newModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="POST" action="/programmings">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-plus-circle me-2"></i>Nueva programación</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Nombre <span class="text-danger">*</span></label>
+            <input type="text" name="name" class="form-control" placeholder="Ej: Plan Lector Primaria" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Programa <span class="text-danger">*</span></label>
+            <select name="program_id" class="form-select" required>
+              <option value="">— Seleccionar —</option>
+              <% programs.forEach(p => { %>
+              <option value="<%= p.id %>"><%= p.name %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Curso destinatario</label>
+            <input type="text" name="course" class="form-control" placeholder="Ej: 3º EP (opcional)">
+            <div class="form-text">Solo informativo; no filtra actividades.</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Descripción</label>
+            <textarea name="description" class="form-control" rows="2" placeholder="Descripción breve..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Crear y editar secuencia</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

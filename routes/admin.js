@@ -89,17 +89,20 @@ router.get('/programs', (req, res) => {
 
 router.post('/programs', (req, res) => {
   const db = getDb();
-  const { name, description, color, icon } = req.body;
-  db.prepare('INSERT INTO programs (name, description, color, icon) VALUES (?, ?, ?, ?)').run(name, description, color || '#0d6efd', icon || 'book');
+  const { name, description, color, icon, mode } = req.body;
+  db.prepare('INSERT INTO programs (name, description, color, icon, mode) VALUES (?, ?, ?, ?, ?)').run(
+    name, description, color || '#0d6efd', icon || 'book', mode === 'grupal' ? 'grupal' : 'individual'
+  );
   req.session.flash = { success: 'Programa creado.' };
   res.redirect('/admin/programs');
 });
 
 router.post('/programs/:id', (req, res) => {
   const db = getDb();
-  const { name, description, color, icon, active } = req.body;
-  db.prepare('UPDATE programs SET name=?, description=?, color=?, icon=?, active=? WHERE id=?').run(
-    name, description, color, icon, active === 'on' ? 1 : 0, req.params.id
+  const { name, description, color, icon, active, mode } = req.body;
+  db.prepare('UPDATE programs SET name=?, description=?, color=?, icon=?, active=?, mode=? WHERE id=?').run(
+    name, description, color, icon, active === 'on' ? 1 : 0,
+    mode === 'grupal' ? 'grupal' : 'individual', req.params.id
   );
   req.session.flash = { success: 'Programa actualizado.' };
   res.redirect('/admin/programs');

@@ -28,11 +28,17 @@
               </div>
             </div>
             <div class="row g-2">
-              <div class="col-md-8">
+              <div class="col-md-6">
                 <input type="text" name="description" class="form-control form-control-sm" value="<%= p.description || '' %>" placeholder="Descripción">
               </div>
-              <div class="col-md-4">
+              <div class="col-md-3">
                 <input type="text" name="icon" class="form-control form-control-sm" value="<%= p.icon || '' %>" placeholder="Icono Bootstrap">
+              </div>
+              <div class="col-md-3">
+                <select name="mode" class="form-select form-select-sm">
+                  <option value="individual" <%= (p.mode||'individual')==='individual'?'selected':'' %>>👤 Individual</option>
+                  <option value="grupal"     <%= (p.mode||'')==='grupal'?'selected':'' %>>👥 Por grupos</option>
+                </select>
               </div>
             </div>
             <div class="mt-2">
@@ -58,6 +64,12 @@
             <div class="mb-2 d-flex gap-2">
               <input type="color" name="color" value="#0d6efd" class="form-control form-control-color" style="width:40px">
               <input type="text" name="icon" class="form-control form-control-sm" placeholder="Icono (ej: book)" value="book">
+            </div>
+            <div class="mb-2">
+              <select name="mode" class="form-select form-select-sm">
+                <option value="individual">👤 Individual (alumno a alumno)</option>
+                <option value="grupal">👥 Por grupos (clase completa)</option>
+              </select>
             </div>
             <button type="submit" class="btn btn-primary btn-sm w-100">Añadir programa</button>
           </form>

@@ -1,0 +1,187 @@
+<%- include('../partials/header') %>
+<%- include('../partials/nav') %>
+
+<div class="page-content">
+  <%- include('../partials/flash') %>
+
+  <div class="d-flex align-items-center gap-3 mb-2">
+    <h1 class="h3 fw-bold mb-0"><i class="bi bi-file-earmark-arrow-up me-2"></i>Importar datos</h1>
+  </div>
+  <p class="text-muted mb-4">Descarga la plantilla Excel, rellénala y súbela para importar datos en bloque. Las columnas marcadas con <strong>*</strong> son obligatorias.</p>
+
+  <div class="row g-4">
+
+    <!-- ALUMNADO -->
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm h-100" style="border-top:4px solid #198754!important">
+        <div class="card-body">
+          <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="rounded-3 d-flex align-items-center justify-content-center" style="width:48px;height:48px;background:#eaf7ef">
+              <i class="bi bi-people-fill fs-4" style="color:#198754"></i>
+            </div>
+            <div>
+              <div class="fw-bold fs-6">Alumnado</div>
+              <div class="small text-muted">Alumnos y alumnas del centro</div>
+            </div>
+          </div>
+
+          <!-- Columns list -->
+          <div class="mb-3">
+            <div class="small text-muted fw-semibold mb-1">Columnas de la plantilla:</div>
+            <div class="d-flex flex-wrap gap-1">
+              <span class="badge border" style="background:#eaf7ef;color:#1a7340;font-size:.7rem">Nombre *</span>
+              <span class="badge border" style="background:#eaf7ef;color:#1a7340;font-size:.7rem">Apellidos *</span>
+              <span class="badge bg-light text-muted border" style="font-size:.7rem">Curso</span>
+              <span class="badge bg-light text-muted border" style="font-size:.7rem">Grupo</span>
+              <span class="badge bg-light text-muted border" style="font-size:.7rem">Notas</span>
+            </div>
+          </div>
+
+          <a href="/import/template/alumnos" class="btn btn-sm btn-outline-success w-100 mb-3">
+            <i class="bi bi-download me-1"></i>Descargar plantilla Excel
+          </a>
+
+          <hr class="my-2">
+
+          <form method="POST" action="/import/upload" enctype="multipart/form-data">
+            <input type="hidden" name="type" value="alumnos">
+            <label class="form-label small fw-semibold">Subir fichero rellenado:</label>
+            <div class="input-group input-group-sm mb-2">
+              <input type="file" name="file" class="form-control" accept=".xlsx,.xls" required>
+            </div>
+            <button type="submit" class="btn btn-success btn-sm w-100">
+              <i class="bi bi-upload me-1"></i>Importar alumnado
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACTIVIDADES -->
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm h-100" style="border-top:4px solid #0d6efd!important">
+        <div class="card-body">
+          <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="rounded-3 d-flex align-items-center justify-content-center" style="width:48px;height:48px;background:#ebf2ff">
+              <i class="bi bi-list-task fs-4" style="color:#0d6efd"></i>
+            </div>
+            <div>
+              <div class="fw-bold fs-6">Actividades</div>
+              <div class="small text-muted">Banco de actividades por programa</div>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <div class="small text-muted fw-semibold mb-1">Columnas de la plantilla:</div>
+            <div class="d-flex flex-wrap gap-1">
+              <span class="badge border" style="background:#ebf2ff;color:#084298;font-size:.7rem">Nombre *</span>
+              <span class="badge border" style="background:#ebf2ff;color:#084298;font-size:.7rem">Programa *</span>
+              <span class="badge bg-light text-muted border" style="font-size:.7rem">Descripción</span>
+              <span class="badge bg-light text-muted border" style="font-size:.7rem">Duración (min)</span>
+              <span class="badge bg-light text-muted border" style="font-size:.7rem">Materiales</span>
+              <span class="badge bg-light text-muted border" style="font-size:.7rem">Niveles</span>
+            </div>
+          </div>
+
+          <div class="alert alert-warning py-2 px-3 small mb-3">
+            <i class="bi bi-info-circle me-1"></i>
+            El campo <strong>Programa</strong> debe coincidir exactamente con un programa ya creado en el sistema.
+          </div>
+
+          <a href="/import/template/actividades" class="btn btn-sm btn-outline-primary w-100 mb-3">
+            <i class="bi bi-download me-1"></i>Descargar plantilla Excel
+          </a>
+
+          <hr class="my-2">
+
+          <form method="POST" action="/import/upload" enctype="multipart/form-data">
+            <input type="hidden" name="type" value="actividades">
+            <label class="form-label small fw-semibold">Subir fichero rellenado:</label>
+            <div class="input-group input-group-sm mb-2">
+              <input type="file" name="file" class="form-control" accept=".xlsx,.xls" required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm w-100">
+              <i class="bi bi-upload me-1"></i>Importar actividades
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROGRAMAS -->
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm h-100" style="border-top:4px solid #6f42c1!important">
+        <div class="card-body">
+          <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="rounded-3 d-flex align-items-center justify-content-center" style="width:48px;height:48px;background:#f3eeff">
+              <i class="bi bi-journal-bookmark-fill fs-4" style="color:#6f42c1"></i>
+            </div>
+            <div>
+              <div class="fw-bold fs-6">Programas</div>
+              <div class="small text-muted">Programas de intervención</div>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <div class="small text-muted fw-semibold mb-1">Columnas de la plantilla:</div>
+            <div class="d-flex flex-wrap gap-1">
+              <span class="badge border" style="background:#f3eeff;color:#4a2080;font-size:.7rem">Nombre *</span>
+              <span class="badge bg-light text-muted border" style="font-size:.7rem">Descripción</span>
+              <span class="badge bg-light text-muted border" style="font-size:.7rem">Color</span>
+              <span class="badge bg-light text-muted border" style="font-size:.7rem">Icono</span>
+              <span class="badge bg-light text-muted border" style="font-size:.7rem">Modo</span>
+            </div>
+          </div>
+
+          <div class="alert alert-info py-2 px-3 small mb-3">
+            <i class="bi bi-info-circle me-1"></i>
+            <strong>Modo:</strong> <code>individual</code> o <code>grupal</code>.
+            <strong>Color:</strong> hexadecimal (ej. <code>#0d6efd</code>).
+            <strong>Icono:</strong> nombre de Bootstrap Icons.
+          </div>
+
+          <a href="/import/template/programas" class="btn btn-sm w-100 mb-3" style="background:#6f42c1;color:white;border:none">
+            <i class="bi bi-download me-1"></i>Descargar plantilla Excel
+          </a>
+
+          <hr class="my-2">
+
+          <form method="POST" action="/import/upload" enctype="multipart/form-data">
+            <input type="hidden" name="type" value="programas">
+            <label class="form-label small fw-semibold">Subir fichero rellenado:</label>
+            <div class="input-group input-group-sm mb-2">
+              <input type="file" name="file" class="form-control" accept=".xlsx,.xls" required>
+            </div>
+            <button type="submit" class="btn btn-sm w-100 fw-semibold" style="background:#6f42c1;color:white;border:none">
+              <i class="bi bi-upload me-1"></i>Importar programas
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Tips -->
+  <div class="card border-0 bg-light mt-4">
+    <div class="card-body py-3">
+      <div class="row g-3">
+        <div class="col-md-4 d-flex gap-2 align-items-start">
+          <i class="bi bi-1-circle-fill text-primary mt-1"></i>
+          <div class="small"><strong>Descarga la plantilla</strong> del tipo de dato que quieres importar. Está lista para rellenar.</div>
+        </div>
+        <div class="col-md-4 d-flex gap-2 align-items-start">
+          <i class="bi bi-2-circle-fill text-primary mt-1"></i>
+          <div class="small"><strong>Rellena los datos</strong> en la hoja "Datos" a partir de la fila 4. Respeta los nombres de columna.</div>
+        </div>
+        <div class="col-md-4 d-flex gap-2 align-items-start">
+          <i class="bi bi-3-circle-fill text-primary mt-1"></i>
+          <div class="small"><strong>Sube el fichero</strong> y el sistema importará los registros, informando de cualquier error fila a fila.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<%- include('../partials/footer') %>

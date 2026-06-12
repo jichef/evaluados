@@ -10,12 +10,14 @@ router.get('/new', (req, res) => {
   const db = getDb();
   const programs = db.prepare('SELECT * FROM programs WHERE active = 1 ORDER BY sort_order').all();
 
-  // Last session for repeat functionality
   const lastSession = db.prepare(`
-    SELECT sl.*, s.name || ' ' || s.surname AS student_name,
+    SELECT sl.*,
+           CASE WHEN sl.student_id IS NOT NULL THEN s.name || ' ' || s.surname
+                ELSE sl.group_course || COALESCE(' – ' || sl.group_name, '')
+           END AS student_name,
            a.name AS activity_name, p.name AS program_name
     FROM sessions_log sl
-    JOIN students s ON sl.student_id = s.id
+    LEFT JOIN students s ON sl.student_id = s.id
     JOIN activities a ON sl.activity_id = a.id
     JOIN programs p ON sl.program_id = p.id
     WHERE sl.teacher_id = ?
@@ -24,11 +26,26 @@ router.get('/new', (req, res) => {
 
   const preStudent = req.query.student_id ? db.prepare('SELECT * FROM students WHERE id = ?').get(req.query.student_id) : null;
 
+  // Group letters used in the school (from registered students, fallback A–C)
+  const usedLetters = db.prepare(
+    "SELECT DISTINCT group_name FROM students WHERE active=1 AND group_name IS NOT NULL ORDER BY group_name"
+  ).all().map(r => r.group_name);
+  const groupLetters = usedLetters.length ? usedLetters : ['A', 'B', 'C'];
+
+  // Education stages and levels (same as activities)
+  const educationStages = [
+    { stage: 'Infantil',          levels: ['1º EI', '2º EI', '3º EI'] },
+    { stage: 'Primaria',          levels: ['1º EP', '2º EP', '3º EP', '4º EP', '5º EP', '6º EP'] },
+    { stage: 'Secundaria (ESO)',  levels: ['1º ESO', '2º ESO', '3º ESO', '4º ESO'] },
+  ];
+
   res.render('sessions/new', {
     title: 'Registrar Sesión',
     programs,
     lastSession,
     preStudent,
+    groupLetters,
+    educationStages,
   });
 });
 
@@ -36,41 +53,61 @@ router.get('/new', (req, res) => {
 router.post('/', (req, res) => {
   const db = getDb();
   const {
-    student_id, activity_id, program_id, situation_id,
+    student_id, group_course, group_name,
+    activity_id, program_id, situation_id,
     rating, observations, quick_comments_text,
     criteria_ratings
   } = req.body;
 
-  if (!student_id || !activity_id || !program_id) {
+  if (!activity_id || !program_id) {
     return res.status(400).json({ error: 'Faltan campos obligatorios' });
   }
 
+  const program = db.prepare('SELECT mode FROM programs WHERE id = ?').get(program_id);
+  const isGrupal = program?.mode === 'grupal';
+
+  if (isGrupal && !group_course) {
+    return res.status(400).json({ error: 'Falta el grupo para sesión grupal' });
+  }
+  if (!isGrupal && !student_id) {
+    return res.status(400).json({ error: 'Falta el alumno para sesión individual' });
+  }
+
   const insert = db.prepare(`
-    INSERT INTO sessions_log (student_id, activity_id, teacher_id, program_id, situation_id, rating, observations, quick_comments_text)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO sessions_log
+      (student_id, group_course, group_name, activity_id, teacher_id, program_id, situation_id, rating, observations, quick_comments_text)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
+  const insertCrit = db.prepare('INSERT INTO session_criteria (session_id, criterion_id, rating) VALUES (?, ?, ?)');
 
   const result = insert.run(
-    student_id, activity_id, req.session.user.id,
+    isGrupal ? null : student_id,
+    isGrupal ? group_course : null,
+    isGrupal ? (group_name || null) : null,
+    activity_id, req.session.user.id,
     program_id, situation_id || null, rating || null,
     observations || null, quick_comments_text || null
   );
-
   const sessionId = result.lastInsertRowid;
 
-  // Save criteria ratings
   if (criteria_ratings && typeof criteria_ratings === 'object') {
-    const insertCrit = db.prepare('INSERT INTO session_criteria (session_id, criterion_id, rating) VALUES (?, ?, ?)');
-    Object.entries(criteria_ratings).forEach(([criterionId, r]) => {
-      if (r) insertCrit.run(sessionId, criterionId, r);
-    });
+    const insertCritStmt = insertCrit;
+    db.transaction(() => {
+      Object.entries(criteria_ratings).forEach(([criterionId, r]) => {
+        if (r) insertCritStmt.run(sessionId, criterionId, r);
+      });
+    })();
   }
 
   if (req.headers['content-type']?.includes('application/json')) {
     return res.json({ ok: true, id: sessionId });
   }
 
-  req.session.flash = { success: '¡Sesión registrada correctamente!' };
+  const groupLabel = group_name ? `${group_course} – ${group_name}` : group_course;
+  const msg = isGrupal
+    ? `¡Sesión registrada para el grupo ${groupLabel}!`
+    : '¡Sesión registrada correctamente!';
+  req.session.flash = { success: msg };
   res.redirect('/');
 });
 
@@ -96,10 +133,15 @@ router.get('/', (req, res) => {
   if (date_to) { where += ' AND sl.session_date <= ?'; params.push(date_to); }
 
   const sessions = db.prepare(`
-    SELECT sl.*, s.name || ' ' || s.surname AS student_name, s.course, s.group_name,
-           a.name AS activity_name, p.name AS program_name, p.color, u.name AS teacher_name
+    SELECT sl.*,
+           CASE WHEN sl.student_id IS NOT NULL THEN s.name || ' ' || s.surname
+                ELSE sl.group_course || COALESCE(' – ' || sl.group_name, '')
+           END AS student_name,
+           s.course, s.group_name AS student_group,
+           a.name AS activity_name, p.name AS program_name, p.color, p.mode,
+           u.name AS teacher_name
     FROM sessions_log sl
-    JOIN students s ON sl.student_id = s.id
+    LEFT JOIN students s ON sl.student_id = s.id
     JOIN activities a ON sl.activity_id = a.id
     JOIN programs p ON sl.program_id = p.id
     JOIN users u ON sl.teacher_id = u.id
@@ -129,12 +171,16 @@ router.get('/', (req, res) => {
 router.get('/:id', (req, res) => {
   const db = getDb();
   const session = db.prepare(`
-    SELECT sl.*, s.name || ' ' || s.surname AS student_name, s.course, s.id AS student_id_val,
+    SELECT sl.*,
+           CASE WHEN sl.student_id IS NOT NULL THEN s.name || ' ' || s.surname
+                ELSE sl.group_course || COALESCE(' – ' || sl.group_name, '')
+           END AS student_name,
+           s.course, s.id AS student_id_val,
            a.name AS activity_name, a.description AS activity_desc,
            p.name AS program_name, p.color, u.name AS teacher_name,
            ls.title AS situation_title
     FROM sessions_log sl
-    JOIN students s ON sl.student_id = s.id
+    LEFT JOIN students s ON sl.student_id = s.id
     JOIN activities a ON sl.activity_id = a.id
     JOIN programs p ON sl.program_id = p.id
     JOIN users u ON sl.teacher_id = u.id

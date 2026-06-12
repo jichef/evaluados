@@ -14,7 +14,7 @@
 
   <!-- Progress steps (desktop) -->
   <div class="wizard-steps d-none d-md-flex mb-4">
-    <% ['Alumno', 'Programa', 'Actividad', 'Valoración', 'Observaciones'].forEach((s, i) => { %>
+    <% ['Programa', 'Alumno/Grupo', 'Actividad', 'Valoración', 'Observaciones'].forEach((s, i) => { %>
     <div class="wizard-step" id="step-indicator-<%= i+1 %>">
       <div class="step-circle"><%= i+1 %></div>
       <div class="step-label"><%= s %></div>
@@ -26,6 +26,8 @@
   <form id="sessionForm" action="/sessions" method="POST">
     <!-- Hidden fields -->
     <input type="hidden" name="student_id" id="student_id">
+    <input type="hidden" name="group_course" id="group_course">
+    <input type="hidden" name="group_name" id="group_name">
     <input type="hidden" name="activity_id" id="activity_id">
     <input type="hidden" name="program_id" id="program_id">
     <input type="hidden" name="situation_id" id="situation_id">
@@ -33,69 +35,115 @@
     <input type="hidden" name="observations" id="observations_input">
     <input type="hidden" name="quick_comments_text" id="quick_comments_text">
 
-    <!-- STEP 1: Student -->
+    <!-- STEP 1: Program -->
     <div class="wizard-step-panel" id="panel-1">
       <div class="card border-0 shadow-sm">
         <div class="card-body">
-          <h2 class="h5 fw-semibold mb-3"><span class="step-badge">1</span>Seleccionar alumno/a</h2>
-
-          <div class="mb-3">
-            <div class="input-group input-group-lg">
-              <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
-              <input type="text" id="studentSearch" class="form-control form-control-lg border-start-0"
-                placeholder="Buscar por nombre o apellidos..." autocomplete="off">
-            </div>
-            <div id="studentResults" class="search-dropdown"></div>
-          </div>
-
-          <!-- Selected student display -->
-          <div id="selectedStudentCard" class="alert alert-primary d-none align-items-center gap-3">
-            <div class="student-avatar-lg" id="selectedStudentAvatar"></div>
-            <div class="flex-grow-1">
-              <div class="fw-bold" id="selectedStudentName"></div>
-              <div class="small" id="selectedStudentInfo"></div>
-            </div>
-            <button type="button" class="btn btn-sm btn-outline-primary" id="changeStudentBtn">Cambiar</button>
-          </div>
-
-          <!-- Quick access: recent students -->
-          <div id="recentStudentsList">
-            <p class="text-muted small mb-2"><i class="bi bi-clock me-1"></i>Alumnado reciente:</p>
-            <div id="recentStudentsContainer" class="d-flex flex-wrap gap-2"></div>
-          </div>
-
-          <div class="mt-4">
-            <button type="button" class="btn btn-primary btn-lg w-100" id="step1Next" disabled>
-              Continuar <i class="bi bi-arrow-right ms-2"></i>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- STEP 2: Program -->
-    <div class="wizard-step-panel d-none" id="panel-2">
-      <div class="card border-0 shadow-sm">
-        <div class="card-body">
-          <h2 class="h5 fw-semibold mb-3"><span class="step-badge">2</span>Seleccionar programa</h2>
+          <h2 class="h5 fw-semibold mb-3"><span class="step-badge">1</span>Seleccionar programa</h2>
           <div class="row g-3" id="programButtons">
             <% programs.forEach(p => { %>
             <div class="col-6 col-md-3">
               <button type="button" class="program-btn card h-100 border-2 w-100 text-start p-3"
                 data-program-id="<%= p.id %>" data-program-name="<%= p.name %>"
-                data-program-color="<%= p.color %>"
+                data-program-color="<%= p.color %>" data-program-mode="<%= p.mode || 'individual' %>"
                 style="--program-color: <%= p.color %>">
                 <div class="program-btn-icon mb-2">
                   <i class="bi bi-<%= p.icon %>" style="color:<%= p.color %>; font-size: 1.8rem"></i>
                 </div>
                 <div class="fw-semibold small"><%= p.name %></div>
+                <div class="mt-1">
+                  <% if ((p.mode||'individual') === 'grupal') { %>
+                  <span class="badge bg-success-subtle text-success border" style="font-size:.6rem"><i class="bi bi-people-fill me-1"></i>Por grupos</span>
+                  <% } else { %>
+                  <span class="badge bg-primary-subtle text-primary border" style="font-size:.6rem"><i class="bi bi-person me-1"></i>Individual</span>
+                  <% } %>
+                </div>
               </button>
             </div>
             <% }) %>
           </div>
-          <div class="mt-4">
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: Student (individual) or Group (grupal) — toggled by JS after program selection -->
+    <div class="wizard-step-panel d-none" id="panel-2">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+
+          <!-- Individual mode -->
+          <div id="panel2-individual">
+            <h2 class="h5 fw-semibold mb-3"><span class="step-badge">2</span>Seleccionar alumno/a</h2>
+            <div class="mb-3">
+              <div class="input-group input-group-lg">
+                <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                <input type="text" id="studentSearch" class="form-control form-control-lg border-start-0"
+                  placeholder="Buscar por nombre o apellidos..." autocomplete="off">
+              </div>
+              <div id="studentResults" class="search-dropdown"></div>
+            </div>
+            <div id="selectedStudentCard" class="alert alert-primary d-none align-items-center gap-3">
+              <div class="student-avatar-lg" id="selectedStudentAvatar"></div>
+              <div class="flex-grow-1">
+                <div class="fw-bold" id="selectedStudentName"></div>
+                <div class="small" id="selectedStudentInfo"></div>
+              </div>
+              <button type="button" class="btn btn-sm btn-outline-primary" id="changeStudentBtn">Cambiar</button>
+            </div>
+            <div id="recentStudentsList">
+              <p class="text-muted small mb-2"><i class="bi bi-clock me-1"></i>Alumnado reciente:</p>
+              <div id="recentStudentsContainer" class="d-flex flex-wrap gap-2"></div>
+            </div>
+          </div>
+
+          <!-- Grupal mode -->
+          <div id="panel2-grupal" class="d-none">
+            <h2 class="h5 fw-semibold mb-3"><span class="step-badge">2</span>Seleccionar grupo</h2>
+
+            <!-- Stage tabs -->
+            <div class="grp-stage-tabs mb-3">
+              <% educationStages.forEach((st, si) => { %>
+              <button type="button" class="grp-stage-tab <%= si===1?'active':'' %>" data-stage="<%= si %>">
+                <%= st.stage %>
+              </button>
+              <% }) %>
+            </div>
+
+            <!-- Grid per stage -->
+            <% educationStages.forEach((st, si) => { %>
+            <div class="grp-stage-panel <%= si===1?'':'d-none' %>" data-stage="<%= si %>">
+              <div class="grp-grid" style="--grp-cols:<%= groupLetters.length %>">
+                <!-- Header row: group letters -->
+                <div class="grp-header-cell"></div>
+                <% groupLetters.forEach(l => { %><div class="grp-header-cell"><%= l %></div><% }) %>
+                <!-- Rows: one per course -->
+                <% st.levels.forEach(level => { %>
+                <div class="grp-row-label"><%= level %></div>
+                <% groupLetters.forEach(letter => { %>
+                <button type="button" class="grp-cell-btn"
+                  data-course="<%= level %>" data-group="<%= letter %>">
+                  <%= level.replace(/[ºª°\s]/g,'').substring(0,2) %><%= letter %>
+                </button>
+                <% }) %>
+                <% }) %>
+              </div>
+            </div>
+            <% }) %>
+
+            <!-- Selected group display -->
+            <div id="selectedGroupCard" class="alert alert-success d-none align-items-center gap-2 mt-3 py-2">
+              <i class="bi bi-people-fill text-success"></i>
+              <span class="fw-semibold" id="selectedGroupName"></span>
+              <button type="button" class="btn btn-sm btn-outline-success ms-auto" id="changeGroupBtn">Cambiar</button>
+            </div>
+          </div>
+
+          <div class="mt-4 d-flex gap-2">
             <button type="button" class="btn btn-outline-secondary" onclick="goToStep(1)">
               <i class="bi bi-arrow-left me-1"></i>Atrás
+            </button>
+            <button type="button" class="btn btn-primary btn-lg flex-grow-1" id="step2Next" disabled>
+              Continuar <i class="bi bi-arrow-right ms-2"></i>
             </button>
           </div>
         </div>
@@ -106,7 +154,40 @@
     <div class="wizard-step-panel d-none" id="panel-3">
       <div class="card border-0 shadow-sm">
         <div class="card-body">
-          <h2 class="h5 fw-semibold mb-3"><span class="step-badge">3</span>Banco de actividades</h2>
+          <h2 class="h5 fw-semibold mb-3"><span class="step-badge">3</span>Seleccionar actividad</h2>
+
+          <!-- Programming section (shown when teacher has a programming for this program) -->
+          <div id="programmingSection" class="d-none mb-3">
+            <div class="d-flex align-items-center justify-content-between mb-2 gap-2 flex-wrap">
+              <div class="small fw-semibold text-primary d-flex align-items-center gap-1">
+                <i class="bi bi-calendar2-week"></i>Programación anual
+              </div>
+              <select id="programmingSelect" class="form-select form-select-sm d-none" style="max-width:220px"></select>
+            </div>
+            <!-- Next unrated -->
+            <div id="nextActCard" class="d-none card border-primary mb-2 cursor-pointer" style="cursor:pointer">
+              <div class="card-body p-3">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                  <span class="badge bg-primary"><i class="bi bi-arrow-right-circle me-1"></i>Siguiente</span>
+                  <span class="text-muted small">actividad pendiente</span>
+                </div>
+                <div class="fw-semibold" id="nextActName"></div>
+                <div class="text-muted small" id="nextActDur"></div>
+              </div>
+            </div>
+            <!-- All done -->
+            <div id="allDoneMsg" class="d-none alert alert-success py-2 small mb-2">
+              <i class="bi bi-check-circle-fill me-1"></i>¡Todas las actividades de esta programación han sido evaluadas!
+            </div>
+            <!-- Other activities -->
+            <div id="progOtherList" class="mb-2"></div>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="toggleBankBtn">
+              <i class="bi bi-grid me-1"></i>Ver banco completo
+            </button>
+          </div>
+
+          <!-- Bank section -->
+          <div id="bankSection">
 
           <!-- Level banner (shown when student has a course) -->
           <div id="actLevelBanner" class="d-none alert alert-info py-2 px-3 mb-2 d-flex align-items-center justify-content-between gap-2">
@@ -166,6 +247,8 @@
             </div>
           </div>
 
+          </div><!-- /bankSection -->
+
           <div class="mt-4 d-flex gap-2">
             <button type="button" class="btn btn-outline-secondary" onclick="goToStep(2)">
               <i class="bi bi-arrow-left me-1"></i>Atrás
@@ -174,6 +257,7 @@
               Continuar <i class="bi bi-arrow-right ms-2"></i>
             </button>
           </div>
+
         </div>
       </div>
     </div>
@@ -268,7 +352,7 @@
           <!-- Summary before save -->
           <div class="save-summary alert alert-light border mb-3">
             <div class="row g-2 small">
-              <div class="col-6"><span class="text-muted">Alumno/a:</span> <strong id="sumStudent"></strong></div>
+              <div class="col-6"><span class="text-muted" id="sumStudentLabel">Alumno/a:</span> <strong id="sumStudent"></strong></div>
               <div class="col-6"><span class="text-muted">Programa:</span> <strong id="sumProgram"></strong></div>
               <div class="col-6"><span class="text-muted">Actividad:</span> <strong id="sumActivity"></strong></div>
               <div class="col-6"><span class="text-muted">Valoración:</span> <strong id="sumRating"></strong></div>
@@ -294,6 +378,7 @@
 const state = {
   currentStep: 1,
   student: null,
+  group: null,          // { course, group_name, count } for grupal programs
   program: null,
   activity: null,
   activityDetails: null,
@@ -315,6 +400,7 @@ function goToStep(n) {
   state.currentStep = n;
   updateStepIndicators(n);
   window.scrollTo(0, 0);
+  if (n === 3) loadProgrammingSection();
   if (n === 5) {
     loadQuickComments();
     loadFavorites();
@@ -330,7 +416,43 @@ function updateStepIndicators(active) {
   });
 }
 
-// ─── Step 1: Student search ───────────────────────────
+// ─── Step 1: Program selection ────────────────────────
+document.querySelectorAll('.program-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    state.program = {
+      id: btn.dataset.programId,
+      name: btn.dataset.programName,
+      color: btn.dataset.programColor || '#0d6efd',
+      mode: btn.dataset.programMode || 'individual',
+    };
+    document.getElementById('program_id').value = state.program.id;
+
+    // Show correct sub-panel in step 2 based on mode
+    document.getElementById('panel2-individual').classList.toggle('d-none', state.program.mode === 'grupal');
+    document.getElementById('panel2-grupal').classList.toggle('d-none', state.program.mode !== 'grupal');
+
+    // Reset step-2 selection
+    state.student = null; state.group = null;
+    document.getElementById('student_id').value = '';
+    document.getElementById('group_course').value = '';
+    document.getElementById('group_name').value = '';
+    document.getElementById('step2Next').disabled = true;
+    document.getElementById('selectedStudentCard').classList.add('d-none');
+    document.getElementById('selectedGroupCard').classList.add('d-none');
+
+    // Reset activity
+    state.activity = null; state.activityDetails = null;
+    document.getElementById('activity_id').value = '';
+    document.getElementById('step3Next').disabled = true;
+    document.getElementById('activityDetails').classList.add('d-none');
+    document.getElementById('activitySearch').value = '';
+    loadActivities(state.program.id);
+
+    goToStep(2);
+  });
+});
+
+// ─── Step 2 individual: Student search ───────────────
 const studentSearch = document.getElementById('studentSearch');
 const studentResults = document.getElementById('studentResults');
 let searchTimeout;
@@ -367,16 +489,13 @@ function selectStudent(s) {
   studentResults.classList.remove('show');
   studentSearch.value = '';
   document.getElementById('recentStudentsList').classList.add('d-none');
-
   const card = document.getElementById('selectedStudentCard');
   card.classList.remove('d-none');
   card.classList.add('d-flex');
   document.getElementById('selectedStudentAvatar').textContent = s.name.charAt(0) + s.surname.charAt(0);
   document.getElementById('selectedStudentName').textContent = `${s.name} ${s.surname}`;
   document.getElementById('selectedStudentInfo').textContent = `${s.course || ''} ${s.group_name ? '· ' + s.group_name : ''}`.trim();
-  document.getElementById('step1Next').disabled = false;
-
-  // Load recent sessions for context
+  document.getElementById('step2Next').disabled = false;
   loadRecentContext(s.id);
 }
 
@@ -385,18 +504,14 @@ document.getElementById('changeStudentBtn').addEventListener('click', () => {
   document.getElementById('student_id').value = '';
   document.getElementById('selectedStudentCard').classList.add('d-none');
   document.getElementById('selectedStudentCard').classList.remove('d-flex');
-  document.getElementById('step1Next').disabled = true;
+  document.getElementById('step2Next').disabled = true;
   document.getElementById('recentStudentsList').classList.remove('d-none');
   studentSearch.focus();
 });
 
 async function loadRecentContext(studentId) {
-  const res = await fetch(`/api/students/${studentId}/recent`);
-  const sessions = await res.json();
-  // Context loaded but not shown inline - used for smart defaults
+  await fetch(`/api/students/${studentId}/recent`);
 }
-
-document.getElementById('step1Next').addEventListener('click', () => goToStep(2));
 
 // Load recent students
 async function loadRecentStudents() {
@@ -414,33 +529,61 @@ async function loadRecentStudents() {
 }
 loadRecentStudents();
 
-// Pre-selected student
-<% if (preStudent) { %>
-selectStudent(<%= JSON.stringify(preStudent) %>);
-<% } %>
-
-// Close dropdown on outside click
 document.addEventListener('click', e => {
   if (!e.target.closest('#studentSearch') && !e.target.closest('#studentResults')) {
     studentResults.classList.remove('show');
   }
 });
 
-// ─── Step 2: Program selection ────────────────────────
-document.querySelectorAll('.program-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    state.program = { id: btn.dataset.programId, name: btn.dataset.programName, color: btn.dataset.programColor || '#0d6efd' };
-    document.getElementById('program_id').value = state.program.id;
-    // Reset activity state when changing program
-    state.activity = null; state.activityDetails = null;
-    document.getElementById('activity_id').value = '';
-    document.getElementById('step3Next').disabled = true;
-    document.getElementById('activityDetails').classList.add('d-none');
-    document.getElementById('activitySearch').value = '';
-    loadActivities(state.program.id);
-    goToStep(3);
+// Pre-selected student (goes straight to step 2 with program pre-filled if needed)
+<% if (preStudent) { %>
+document.getElementById('panel2-individual').classList.remove('d-none');
+document.getElementById('panel2-grupal').classList.add('d-none');
+selectStudent(<%= JSON.stringify(preStudent) %>);
+goToStep(2);
+<% } %>
+
+// ─── Step 2 grupal: Stage tabs + grid ────────────────
+document.querySelectorAll('.grp-stage-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.grp-stage-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    const si = tab.dataset.stage;
+    document.querySelectorAll('.grp-stage-panel').forEach(p => p.classList.add('d-none'));
+    document.querySelector(`.grp-stage-panel[data-stage="${si}"]`).classList.remove('d-none');
   });
 });
+
+function selectGroup(course, grp) {
+  state.group = { course, group_name: grp };
+  document.getElementById('group_course').value = course;
+  document.getElementById('group_name').value   = grp;
+
+  document.querySelectorAll('.grp-cell-btn').forEach(b => b.classList.remove('grp-cell-selected'));
+  document.querySelector(`.grp-cell-btn[data-course="${CSS.escape(course)}"][data-group="${CSS.escape(grp)}"]`)?.classList.add('grp-cell-selected');
+
+  const label = `${course} – ${grp}`;
+  document.getElementById('selectedGroupName').textContent = label;
+  const card = document.getElementById('selectedGroupCard');
+  card.classList.remove('d-none'); card.classList.add('d-flex');
+  document.getElementById('step2Next').disabled = false;
+}
+
+document.querySelectorAll('.grp-cell-btn').forEach(btn => {
+  btn.addEventListener('click', () => selectGroup(btn.dataset.course, btn.dataset.group));
+});
+
+document.getElementById('changeGroupBtn')?.addEventListener('click', () => {
+  state.group = null;
+  document.getElementById('group_course').value = '';
+  document.getElementById('group_name').value   = '';
+  document.getElementById('selectedGroupCard').classList.add('d-none');
+  document.getElementById('selectedGroupCard').classList.remove('d-flex');
+  document.getElementById('step2Next').disabled = true;
+  document.querySelectorAll('.grp-cell-btn').forEach(b => b.classList.remove('grp-cell-selected'));
+});
+
+document.getElementById('step2Next').addEventListener('click', () => goToStep(3));
 
 // ─── Step 3: Activity bank ────────────────────────────
 let _allActivities = [];
@@ -568,8 +711,9 @@ async function selectActivity(a) {
   document.getElementById('activity_id').value = a.id;
   document.getElementById('step3Next').disabled = false;
 
-  // Re-render grid to show selection highlight
+  // Re-render grid and programming section to show selection highlight
   renderActivityGrid();
+  if (_activeProg) renderActiveProg();
 
   // Load details
   const res = await fetch(`/api/activities/${a.id}`);
@@ -648,6 +792,127 @@ document.getElementById('actClearSearch').addEventListener('click', () => {
 });
 
 document.getElementById('step3Next').addEventListener('click', () => goToStep(4));
+
+// ─── Programming section ──────────────────────────────────
+let _programmings = [];
+let _activeProg = null;
+let _bankVisible = true;
+
+async function loadProgrammingSection() {
+  const programId = state.program?.id;
+  if (!programId) return;
+
+  const params = new URLSearchParams({ program_id: programId });
+  if (state.student?.id) params.set('student_id', state.student.id);
+  if (state.group?.course) {
+    params.set('group_course', state.group.course);
+    if (state.group.group_name) params.set('group_name', state.group.group_name);
+  }
+
+  const res = await fetch(`/api/programmings?${params}`);
+  _programmings = await res.json();
+
+  const progSection = document.getElementById('programmingSection');
+  const bankSection = document.getElementById('bankSection');
+  const toggleBtn = document.getElementById('toggleBankBtn');
+
+  if (!_programmings.length) {
+    progSection.classList.add('d-none');
+    bankSection.classList.remove('d-none');
+    _bankVisible = true;
+    return;
+  }
+
+  progSection.classList.remove('d-none');
+  _bankVisible = false;
+  bankSection.classList.add('d-none');
+  toggleBtn.innerHTML = '<i class="bi bi-grid me-1"></i>Ver banco completo';
+
+  // Populate select if multiple
+  const sel = document.getElementById('programmingSelect');
+  if (_programmings.length > 1) {
+    sel.classList.remove('d-none');
+    sel.innerHTML = _programmings.map(p => `<option value="${p.id}">${escWiz(p.name)}</option>`).join('');
+    sel.onchange = () => {
+      _activeProg = _programmings.find(p => String(p.id) === sel.value) || _programmings[0];
+      renderActiveProg();
+    };
+  } else {
+    sel.classList.add('d-none');
+  }
+  _activeProg = _programmings[0];
+  renderActiveProg();
+}
+
+function renderActiveProg() {
+  if (!_activeProg) return;
+  const { activities, next_unrated_id } = _activeProg;
+
+  const nextCard = document.getElementById('nextActCard');
+  const allDone = document.getElementById('allDoneMsg');
+  const otherList = document.getElementById('progOtherList');
+
+  const nextAct = activities.find(a => a.id === next_unrated_id);
+  if (nextAct) {
+    nextCard.classList.remove('d-none');
+    allDone.classList.add('d-none');
+    document.getElementById('nextActName').textContent = nextAct.name;
+    document.getElementById('nextActDur').textContent = `${nextAct.duration || 30} min`;
+    nextCard.onclick = () => triggerSelectFromProg(nextAct);
+    highlightNextCard(nextAct.id);
+  } else if (activities.length) {
+    nextCard.classList.add('d-none');
+    allDone.classList.remove('d-none');
+  } else {
+    nextCard.classList.add('d-none');
+    allDone.classList.add('d-none');
+  }
+
+  // Other activities (all except next)
+  const others = activities.filter(a => a.id !== next_unrated_id);
+  if (!others.length) { otherList.innerHTML = ''; return; }
+  otherList.innerHTML = `<div class="small text-muted fw-semibold mb-1">Otras actividades:</div>
+    <div class="d-flex flex-wrap gap-1">
+      ${others.map(a => {
+        const done = a.done;
+        const sel = state.activity?.id === a.id;
+        return `<button type="button" class="btn btn-sm ${done ? 'btn-outline-secondary' : 'btn-outline-primary'} prog-act-pill${sel ? ' active' : ''}" data-act-id="${a.id}">
+          ${done ? '<i class="bi bi-check2 me-1"></i>' : ''}${escWiz(a.name)}
+        </button>`;
+      }).join('')}
+    </div>`;
+  otherList.querySelectorAll('.prog-act-pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const actId = parseInt(btn.dataset.actId);
+      const act = _allActivities.find(a => a.id === actId)
+        || _activeProg.activities.find(a => a.id === actId);
+      if (act) triggerSelectFromProg(act);
+    });
+  });
+}
+
+function triggerSelectFromProg(act) {
+  // If the activity is in _allActivities use it directly; otherwise create minimal object
+  const full = _allActivities.find(a => a.id === act.id) || act;
+  selectActivity(full);
+  highlightNextCard(act.id);
+}
+
+function highlightNextCard(selectedId) {
+  const nextCard = document.getElementById('nextActCard');
+  const isNextSelected = state.activity?.id === selectedId
+    || (_activeProg?.next_unrated_id === selectedId && state.activity?.id === selectedId);
+  nextCard.classList.toggle('border-success', state.activity?.id !== null && _activeProg?.next_unrated_id === state.activity?.id);
+  nextCard.classList.toggle('border-primary', state.activity?.id === null || _activeProg?.next_unrated_id !== state.activity?.id);
+}
+
+document.getElementById('toggleBankBtn')?.addEventListener('click', () => {
+  _bankVisible = !_bankVisible;
+  document.getElementById('bankSection').classList.toggle('d-none', !_bankVisible);
+  document.getElementById('toggleBankBtn').innerHTML = _bankVisible
+    ? '<i class="bi bi-x me-1"></i>Ocultar banco'
+    : '<i class="bi bi-grid me-1"></i>Ver banco completo';
+});
 
 // ─── Step 4: Rating ───────────────────────────────────
 const ratingLabels = { conseguido: '✅ Conseguido', en_proceso: '🔄 En proceso', necesita_apoyo: '🔶 Necesita apoyo' };
@@ -755,7 +1020,12 @@ document.getElementById('saveFavBtn').addEventListener('click', async () => {
 
 // Update summary
 function updateSummary() {
-  document.getElementById('sumStudent').textContent = state.student ? `${state.student.name} ${state.student.surname}` : '—';
+  const isGrupal = state.program?.mode === 'grupal';
+  document.getElementById('sumStudentLabel').textContent = isGrupal ? 'Grupo:' : 'Alumno/a:';
+  const who = isGrupal
+    ? (state.group ? state.group.course + (state.group.group_name ? ' – ' + state.group.group_name : '') : '—')
+    : (state.student ? `${state.student.name} ${state.student.surname}` : '—');
+  document.getElementById('sumStudent').textContent = who;
   document.getElementById('sumProgram').textContent = state.program?.name || '—';
   document.getElementById('sumActivity').textContent = state.activity?.name || '—';
   document.getElementById('sumRating').textContent = ratingLabels[state.rating] || 'Sin valorar';

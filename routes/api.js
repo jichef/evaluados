@@ -131,6 +131,51 @@ router.get('/programs', (req, res) => {
   res.json(programs);
 });
 
+// Programmings for wizard — returns teacher's programmings with "next unrated" activity
+router.get('/programmings', (req, res) => {
+  const db = getDb();
+  const { program_id, student_id, group_course, group_name } = req.query;
+  if (!program_id) return res.json([]);
+
+  const programmings = db.prepare(`
+    SELECT id, name, course FROM programmings
+    WHERE teacher_id = ? AND program_id = ? AND active = 1
+    ORDER BY name
+  `).all(req.session.user.id, program_id);
+
+  const result = programmings.map(pg => {
+    const activities = db.prepare(`
+      SELECT pa.id AS pa_id, pa.sort_order, a.id, a.name, a.duration
+      FROM programming_activities pa
+      JOIN activities a ON pa.activity_id = a.id
+      WHERE pa.programming_id = ?
+      ORDER BY pa.sort_order, pa.id
+    `).all(pg.id);
+
+    let nextUnratedId = null;
+    activities.forEach(act => {
+      let done = false;
+      if (student_id) {
+        done = !!db.prepare(
+          'SELECT id FROM sessions_log WHERE student_id = ? AND activity_id = ? AND program_id = ? LIMIT 1'
+        ).get(student_id, act.id, program_id);
+      } else if (group_course) {
+        const extra = group_name ? ' AND group_name = ?' : '';
+        const params = [group_course, act.id, program_id, ...(group_name ? [group_name] : [])];
+        done = !!db.prepare(
+          `SELECT id FROM sessions_log WHERE group_course = ? AND activity_id = ? AND program_id = ?${extra} LIMIT 1`
+        ).get(...params);
+      }
+      act.done = done;
+      if (!done && nextUnratedId === null) nextUnratedId = act.id;
+    });
+
+    return { ...pg, activities, next_unrated_id: nextUnratedId };
+  });
+
+  res.json(result);
+});
+
 // Tags
 router.get('/tags', (req, res) => {
   const db = getDb();

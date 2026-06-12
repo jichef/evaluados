@@ -15,6 +15,8 @@
         <li class="nav-item"><a class="nav-link" href="/sessions"><i class="bi bi-clock-history me-1"></i>Historial</a></li>
         <li class="nav-item"><a class="nav-link" href="/students"><i class="bi bi-people me-1"></i>Alumnado</a></li>
         <li class="nav-item"><a class="nav-link" href="/activities"><i class="bi bi-list-task me-1"></i>Actividades</a></li>
+        <li class="nav-item"><a class="nav-link" href="/programmings"><i class="bi bi-calendar2-week me-1"></i>Programaciones</a></li>
+        <li class="nav-item"><a class="nav-link" href="/import"><i class="bi bi-file-earmark-arrow-up me-1"></i>Importar</a></li>
         <li class="nav-item"><a class="nav-link" href="/reports"><i class="bi bi-file-earmark-bar-graph me-1"></i>Informes</a></li>
         <% if (currentUser && currentUser.role === 'admin') { %>
         <li class="nav-item"><a class="nav-link" href="/admin"><i class="bi bi-gear me-1"></i>Admin</a></li>
@@ -71,6 +73,16 @@
       <li class="nav-item mb-1">
         <a href="/activities" class="nav-link sidebar-link <%= currentPath.startsWith('/activities') ? 'active' : '' %>">
           <i class="bi bi-list-task me-2"></i>Actividades
+        </a>
+      </li>
+      <li class="nav-item mb-1">
+        <a href="/programmings" class="nav-link sidebar-link <%= currentPath.startsWith('/programmings') ? 'active' : '' %>">
+          <i class="bi bi-calendar2-week me-2"></i>Programaciones
+        </a>
+      </li>
+      <li class="nav-item mb-1">
+        <a href="/import" class="nav-link sidebar-link <%= currentPath.startsWith('/import') ? 'active' : '' %>">
+          <i class="bi bi-file-earmark-arrow-up me-2"></i>Importar datos
         </a>
       </li>
       <li class="nav-item mb-1">

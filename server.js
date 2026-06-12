@@ -65,6 +65,8 @@ app.use('/activities', require('./routes/activities'));
 app.use('/admin', require('./routes/admin'));
 app.use('/reports', require('./routes/reports'));
 app.use('/admin/backups', require('./routes/backups'));
+app.use('/programmings', require('./routes/programmings'));
+app.use('/import', require('./routes/import'));
 
 // 404
 app.use((req, res) => {
